@@ -1,0 +1,28 @@
+{
+  "_comment": "Outbound MCP is enabled for the full TCGA cohort application. API credentials are read from environment variables only.",
+  "enabled": true,
+  "mcpServers": {
+    "pubmed": {
+      "command": "${PYTHON}",
+      "args": [
+        "${PROJECT_ROOT}/common/run_pubmed_mcp.py"
+      ],
+      "cwd": "${PROJECT_ROOT}",
+      "timeoutSeconds": 30,
+      "allowedTools": [
+        "search_pubmed"
+      ]
+    },
+    "web_search": {
+      "command": "${PYTHON}",
+      "args": [
+        "${PROJECT_ROOT}/common/run_web_search_mcp.py"
+      ],
+      "cwd": "${PROJECT_ROOT}",
+      "timeoutSeconds": 60,
+      "allowedTools": [
+        "search_pathology_web"
+      ]
+    }
+  }
+}

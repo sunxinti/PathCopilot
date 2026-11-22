@@ -1,0 +1,17 @@
+{
+  "_comment": "Outbound MCP used by the full PathCopilot product. Benchmark/evaluation runs must set PATHCOPILOT_OUTBOUND_MCP=0.",
+  "enabled": true,
+  "mcpServers": {
+    "pubmed": {
+      "command": "${PYTHON}",
+      "args": [
+        "${PROJECT_ROOT}/webapp/run_pubmed_mcp.py"
+      ],
+      "cwd": "${PROJECT_ROOT}",
+      "timeoutSeconds": 30,
+      "allowedTools": [
+        "search_pubmed"
+      ]
+    }
+  }
+}

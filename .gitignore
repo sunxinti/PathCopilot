@@ -1,0 +1,84 @@
+# Python caches and environments
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+*.egg-info/
+.pytest_cache/
+.venv/
+venv/
+env/
+dist/
+build/
+.eggs/
+
+# IDE and operating-system files
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+.DS_Store
+Thumbs.db
+
+# Credentials and local configuration
+.env
+.env.*
+!.env.example
+**/config/api_keys.txt
+**/config/*.local.txt
+**/*.pem
+**/*.key
+
+# Local application and evaluation state
+**/logs/
+**/outputs/
+**/uploads/
+**/debug_images/
+**/runtime_data/
+**/dzi_files/
+**/thumbnails/
+**/demo_data/
+**/comparison_runs/
+**/uploaded_files.json
+*.log
+.checkpoint_*.json
+
+# Databases
+*.db
+*.db-wal
+*.db-shm
+*.sqlite
+*.sqlite3
+*.sqlite3-wal
+*.sqlite3-shm
+
+# Whole-slide images and downloaded benchmark data
+*.svs
+*.ndpi
+*.mrxs
+*.scn
+*.bif
+*.vms
+*.vmu
+*.tif
+*.tiff
+*.dzi
+MultiPathQA.csv
+data.json
+wsi/
+slides/
+data_download/work/
+
+# Generated evaluation tables
+records.jsonl
+per_question.csv
+*_per_question.csv
+summary.json
+multipathqa_results-*/
+results_index*.csv
+
+# Desktop binary is uploaded to GitHub Releases, not committed to Git
+desktop/*.exe
+desktop/*.blockmap
+

@@ -1,0 +1,165 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Register - PathCopilot</title>
+    <link href="{{ url_for('static', filename='vendor/font-awesome/css/all.min.css') }}" rel="stylesheet">
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+            min-height: 100vh;
+            display: flex;
+            background: linear-gradient(165deg, #1a56db 0%, #3b82f6 40%, #60a5fa 70%, #dbeafe 100%);
+        }
+        .auth-container { display: flex; width: 100%; min-height: 100vh; }
+        .auth-left {
+            flex: 1; display: flex; flex-direction: column;
+            align-items: center; justify-content: center;
+            padding: 48px; color: #fff;
+        }
+        .auth-left-content { text-align: center; max-width: 420px; }
+        .auth-left h1 { font-size: 42px; font-weight: 800; margin-bottom: 16px; letter-spacing: -0.5px; }
+        .auth-left p { font-size: 16px; line-height: 1.6; color: rgba(255,255,255,0.85); }
+        .auth-left .brand-icon {
+            width: 64px; height: 64px; margin: 0 auto 24px;
+            background: rgba(255,255,255,0.15); border-radius: 18px;
+            display: flex; align-items: center; justify-content: center;
+            font-size: 30px; backdrop-filter: blur(8px);
+        }
+        .auth-right {
+            width: 480px; background: #fff;
+            display: flex; align-items: center; justify-content: center;
+            padding: 48px;
+            box-shadow: -20px 0 60px rgba(0,0,0,0.08);
+        }
+        .auth-form-wrapper { width: 100%; max-width: 360px; }
+        .auth-form-wrapper h2 { font-size: 28px; font-weight: 700; color: #1e293b; margin-bottom: 8px; }
+        .auth-form-wrapper .subtitle { font-size: 14px; color: #94a3b8; margin-bottom: 32px; }
+        .form-group { margin-bottom: 20px; }
+        .form-group label { display: block; font-size: 13px; font-weight: 600; color: #475569; margin-bottom: 6px; }
+        .form-input-wrapper { position: relative; }
+        .form-input-wrapper i {
+            position: absolute; left: 14px; top: 50%; transform: translateY(-50%);
+            color: #94a3b8; font-size: 14px;
+        }
+        .form-input-wrapper input {
+            width: 100%; padding: 12px 14px 12px 42px;
+            border: 1.5px solid #e2e8f0; border-radius: 10px;
+            font-size: 14px; font-family: inherit;
+            transition: border-color 0.2s, box-shadow 0.2s;
+            outline: none; background: #f8fafc;
+        }
+        .form-input-wrapper input:focus {
+            border-color: #3b82f6;
+            box-shadow: 0 0 0 3px rgba(59,130,246,0.12);
+            background: #fff;
+        }
+        .btn-submit {
+            width: 100%; padding: 13px; border: none; border-radius: 10px;
+            background: #1a56db; color: #fff;
+            font-size: 15px; font-weight: 600; font-family: inherit;
+            cursor: pointer; transition: all 0.2s; margin-top: 8px;
+        }
+        .btn-submit:hover {
+            background: #1e40af;
+            box-shadow: 0 6px 20px rgba(26,86,219,0.3);
+        }
+        .auth-switch {
+            text-align: center; margin-top: 24px;
+            font-size: 14px; color: #64748b;
+        }
+        .auth-switch a { color: #1a56db; font-weight: 600; text-decoration: none; }
+        .auth-switch a:hover { text-decoration: underline; }
+        .error-msg {
+            background: #fef2f2; color: #dc2626; padding: 10px 14px;
+            border-radius: 8px; font-size: 13px; margin-bottom: 20px;
+            border: 1px solid #fecaca; display: none;
+        }
+        .error-msg.show { display: block; }
+        .success-msg {
+            background: #f0fdf4; color: #16a34a; padding: 10px 14px;
+            border-radius: 8px; font-size: 13px; margin-bottom: 20px;
+            border: 1px solid #bbf7d0; display: none;
+        }
+        .success-msg.show { display: block; }
+        .password-rules {
+            font-size: 12px; color: #94a3b8; margin-top: 6px;
+        }
+        .back-link {
+            position: fixed; top: 24px; left: 24px;
+            color: rgba(255,255,255,0.8); text-decoration: none;
+            font-size: 14px; font-weight: 500;
+            display: flex; align-items: center; gap: 6px;
+            transition: color 0.2s;
+        }
+        .back-link:hover { color: #fff; }
+        @media (max-width: 900px) {
+            .auth-left { display: none; }
+            .auth-right { width: 100%; }
+        }
+    </style>
+</head>
+<body>
+    <a href="/" class="back-link"><i class="fas fa-arrow-left"></i> Back</a>
+    <div class="auth-container">
+        <div class="auth-left">
+            <div class="auth-left-content">
+                <div class="brand-icon"><i class="fas fa-microscope"></i></div>
+                <h1>PathCopilot</h1>
+                <p>Distributed agentic reasoning for patch-to-patient evidence synthesis and traceable pathology</p>
+            </div>
+        </div>
+        <div class="auth-right">
+            <div class="auth-form-wrapper">
+                <h2>Create account</h2>
+                <p class="subtitle">Get started with PathCopilot</p>
+                <div class="error-msg" id="errorMsg">{{ error or '' }}</div>
+                <div class="success-msg" id="successMsg">{{ success or '' }}</div>
+                <form id="registerForm" method="POST" action="/register">
+                    <div class="form-group">
+                        <label>Username</label>
+                        <div class="form-input-wrapper">
+                            <i class="fas fa-user"></i>
+                            <input type="text" name="username" placeholder="Choose a username" required minlength="3" maxlength="30" autocomplete="username">
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label>Email</label>
+                        <div class="form-input-wrapper">
+                            <i class="fas fa-envelope"></i>
+                            <input type="email" name="email" placeholder="Enter your email" required autocomplete="email">
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label>Password</label>
+                        <div class="form-input-wrapper">
+                            <i class="fas fa-lock"></i>
+                            <input type="password" name="password" placeholder="Create a password" required minlength="6" autocomplete="new-password">
+                        </div>
+                        <p class="password-rules">At least 6 characters</p>
+                    </div>
+                    <div class="form-group">
+                        <label>Confirm Password</label>
+                        <div class="form-input-wrapper">
+                            <i class="fas fa-lock"></i>
+                            <input type="password" name="confirm_password" placeholder="Confirm your password" required autocomplete="new-password">
+                        </div>
+                    </div>
+                    <button type="submit" class="btn-submit">Create account</button>
+                </form>
+                <div class="auth-switch">
+                    Already have an account? <a href="/login">Sign in</a>
+                </div>
+            </div>
+        </div>
+    </div>
+    <script>
+        const errEl = document.getElementById('errorMsg');
+        const sucEl = document.getElementById('successMsg');
+        if (errEl && errEl.textContent.trim()) errEl.classList.add('show');
+        if (sucEl && sucEl.textContent.trim()) sucEl.classList.add('show');
+    </script>
+</body>
+</html>

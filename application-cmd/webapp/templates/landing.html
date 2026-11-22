@@ -1,0 +1,962 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PathCopilot</title>
+    <link href="{{ url_for('static', filename='vendor/font-awesome/css/all.min.css') }}" rel="stylesheet">
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        html { scroll-behavior: smooth; }
+
+        /* ===== Landing color themes ===== */
+        /* Default: Claude paper cream (米白), not saturated yellow */
+        :root {
+            --ln-bg: #faf9f5;
+            --ln-hero-grad: linear-gradient(165deg, #f4efe6 0%, #f7f4ed 45%, #faf9f5 100%);
+            --ln-hero-title: #191919;
+            --ln-hero-sub: rgba(25,25,25,0.62);
+            --ln-hero-shadow: transparent;
+            --ln-hero-dot: rgba(25,25,25,0.08);
+            --ln-hero-pattern1: rgba(25,25,25,0.03);
+            --ln-hero-pattern2: rgba(25,25,25,0.02);
+            --ln-hero-pattern3: rgba(25,25,25,0.02);
+            --ln-scroll: rgba(25,25,25,0.28);
+            --ln-accent: #191919;
+            --ln-accent-hover: #2f2f2f;
+            --ln-accent-text: #ffffff;
+            --ln-accent-grad: linear-gradient(135deg, #d97757, #c96442);
+            --ln-brand: #191919;
+            --ln-brand-grad: linear-gradient(135deg, #d97757, #c96442);
+            --ln-link-hover: #191919;
+            --ln-outline: #191919;
+            --ln-outline-hover-bg: #f3efe8;
+            --ln-icon-grad: linear-gradient(135deg, #f6e8e1, #f0d8ce);
+            --ln-icon-color: #c96442;
+            --ln-divider: #d97757;
+            --ln-heading: #191919;
+            --ln-inst-hover: #d97757;
+            --ln-inst-hover-shadow: rgba(201,100,66,.12);
+            --ln-avatar-hover: #e8b4a4;
+            --ln-cta-shadow: rgba(25,25,25,0.16);
+        }
+        /* Selectable: original blue palette */
+        :root[data-landing-theme="blue"] {
+            --ln-bg: #f0f4ff;
+            --ln-hero-grad: linear-gradient(165deg, #1a56db 0%, #3b82f6 40%, #60a5fa 70%, #dbeafe 100%);
+            --ln-hero-title: #ffffff;
+            --ln-hero-sub: rgba(255,255,255,0.88);
+            --ln-hero-shadow: rgba(0,0,0,0.1);
+            --ln-hero-dot: rgba(255,255,255,0.25);
+            --ln-hero-pattern1: rgba(255,255,255,0.08);
+            --ln-hero-pattern2: rgba(255,255,255,0.06);
+            --ln-hero-pattern3: rgba(255,255,255,0.04);
+            --ln-scroll: rgba(255,255,255,0.6);
+            --ln-accent: #1a56db;
+            --ln-accent-hover: #1e40af;
+            --ln-accent-text: #ffffff;
+            --ln-accent-grad: linear-gradient(135deg, #1a56db, #3b82f6);
+            --ln-brand: #1a56db;
+            --ln-brand-grad: linear-gradient(135deg, #1a56db, #3b82f6);
+            --ln-link-hover: #1a56db;
+            --ln-outline: #1a56db;
+            --ln-outline-hover-bg: #eef2ff;
+            --ln-icon-grad: linear-gradient(135deg, #eff6ff, #dbeafe);
+            --ln-icon-color: #1a56db;
+            --ln-divider: #3b82f6;
+            --ln-heading: #1e3a5f;
+            --ln-inst-hover: #3b82f6;
+            --ln-inst-hover-shadow: rgba(59,130,246,.1);
+            --ln-avatar-hover: #93c5fd;
+            --ln-cta-shadow: rgba(26,86,219,0.35);
+        }
+
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+            min-height: 100vh;
+            height: 100vh;
+            background: var(--ln-bg);
+            overflow-x: hidden;
+            overflow-y: auto;
+        }
+
+        /* ===== Top Navigation ===== */
+        .top-nav {
+            position: fixed; top: 0; left: 0; right: 0; z-index: 100;
+            display: flex; align-items: center;
+            padding: 0 48px; height: 64px;
+            background: rgba(255,255,255,0.92);
+            backdrop-filter: blur(12px);
+            border-bottom: 1px solid rgba(0,0,0,0.06);
+        }
+        .nav-brand {
+            display: flex; align-items: center; gap: 10px;
+            font-size: 22px; font-weight: 700; color: var(--ln-brand);
+            text-decoration: none; flex-shrink: 0;
+        }
+        .nav-brand .brand-icon {
+            width: 36px; height: 36px;
+            background: var(--ln-brand-grad);
+            border-radius: 10px;
+            display: flex; align-items: center; justify-content: center;
+            color: #fff; font-size: 18px;
+        }
+        /* Center nav links absolutely */
+        .nav-links {
+            position: absolute; left: 50%; transform: translateX(-50%);
+            display: flex; align-items: center; gap: 40px;
+        }
+        .nav-links a {
+            text-decoration: none; color: #374151;
+            font-size: 16px; font-weight: 500;
+            transition: color 0.2s; white-space: nowrap;
+        }
+        .nav-links a:hover { color: var(--ln-link-hover); }
+        .nav-right {
+            display: flex; align-items: center; gap: 12px;
+            margin-left: auto;
+        }
+
+        /* ===== Landing theme toggle ===== */
+        .theme-toggle {
+            width: 36px; height: 36px; border-radius: 8px;
+            border: 1.5px solid #e5e7eb; background: #f9fafb;
+            color: var(--ln-accent); cursor: pointer;
+            display: flex; align-items: center; justify-content: center;
+            font-size: 15px; transition: all .15s; font-family: inherit;
+        }
+        .theme-toggle:hover { background: #f3f4f6; color: var(--ln-accent-hover); }
+
+        /* ===== Language Switcher ===== */
+        .lang-switcher {
+            display: flex; align-items: center;
+            border: 1.5px solid #e5e7eb; border-radius: 8px;
+            overflow: hidden; background: #f9fafb;
+        }
+        .lang-btn {
+            padding: 6px 12px; font-size: 13px; font-weight: 600;
+            cursor: pointer; border: none; background: transparent;
+            color: #6b7280; transition: all 0.15s; font-family: inherit;
+        }
+        .lang-btn.active {
+            background: var(--ln-accent); color: var(--ln-accent-text);
+        }
+        .lang-btn:not(.active):hover { background: #f3f4f6; color: #374151; }
+        .lang-divider { width: 1px; background: #e5e7eb; height: 20px; }
+        .btn-login {
+            padding: 8px 22px; border-radius: 8px; font-size: 14px; font-weight: 600;
+            cursor: pointer; transition: all 0.2s; text-decoration: none;
+            border: 1.5px solid var(--ln-outline); color: var(--ln-outline); background: transparent;
+        }
+        .btn-login:hover { background: var(--ln-outline-hover-bg); }
+        .btn-register {
+            padding: 8px 22px; border-radius: 8px; font-size: 14px; font-weight: 600;
+            cursor: pointer; transition: all 0.2s; text-decoration: none;
+            border: 1.5px solid var(--ln-accent); color: var(--ln-accent-text); background: var(--ln-accent);
+        }
+        .btn-register:hover { background: var(--ln-accent-hover); }
+
+        /* ===== Hero Section ===== */
+        .hero {
+            position: relative;
+            height: calc(100vh - 64px);
+            min-height: 400px;
+            max-height: 560px;
+            display: flex; flex-direction: column;
+            align-items: center; justify-content: center;
+            padding: 48px 24px 40px;
+            background: var(--ln-hero-grad);
+            overflow: hidden;
+        }
+
+        .hero-bg-pattern {
+            position: absolute; inset: 0;
+            background-image:
+                radial-gradient(circle at 20% 50%, var(--ln-hero-pattern1) 0%, transparent 50%),
+                radial-gradient(circle at 80% 20%, var(--ln-hero-pattern2) 0%, transparent 40%),
+                radial-gradient(circle at 60% 80%, var(--ln-hero-pattern3) 0%, transparent 50%);
+            pointer-events: none;
+        }
+
+        /* Floating dots decoration */
+        .hero-dots {
+            position: absolute; inset: 0; pointer-events: none; overflow: hidden;
+        }
+        .hero-dots span {
+            position: absolute;
+            width: 4px; height: 4px;
+            background: var(--ln-hero-dot);
+            border-radius: 50%;
+            animation: float-dot 20s infinite linear;
+        }
+        @keyframes float-dot {
+            0% { transform: translateY(100vh) scale(0); opacity: 0; }
+            10% { opacity: 1; }
+            90% { opacity: 1; }
+            100% { transform: translateY(-10vh) scale(1); opacity: 0; }
+        }
+
+        .hero-content {
+            position: relative; z-index: 2;
+            text-align: center; max-width: 820px;
+        }
+        .hero-title {
+            font-size: 48px; font-weight: 800; color: var(--ln-hero-title);
+            letter-spacing: -1px; line-height: 1.1;
+            margin-bottom: 16px;
+            text-shadow: 0 2px 20px var(--ln-hero-shadow);
+        }
+        .hero-subtitle {
+            font-size: 17px; color: var(--ln-hero-sub);
+            line-height: 1.6; font-weight: 400;
+            max-width: 600px; margin: 0 auto 32px;
+        }
+
+        /* Scroll indicator */
+        .scroll-indicator {
+            position: relative; z-index: 2;
+            margin-top: 20px;
+            animation: bounce 2.5s infinite;
+            color: var(--ln-scroll);
+            font-size: 18px;
+        }
+        @keyframes bounce {
+            0%, 100% { transform: translateY(0); }
+            50% { transform: translateY(10px); }
+        }
+
+        /* ===== Feature Card ===== */
+        .feature-card-wrapper {
+            position: relative; z-index: 2;
+            margin-top: -60px;
+            padding: 0 24px 48px;
+            display: flex; justify-content: center;
+        }
+        .feature-card {
+            background: #fff;
+            border-radius: 20px;
+            padding: 40px 56px;
+            max-width: 520px; width: 100%;
+            text-align: center;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.1), 0 1px 3px rgba(0,0,0,0.06);
+            transition: transform 0.3s, box-shadow 0.3s;
+        }
+        .feature-card:hover {
+            transform: translateY(-4px);
+            box-shadow: 0 28px 70px rgba(0,0,0,0.12), 0 2px 6px rgba(0,0,0,0.06);
+        }
+        .feature-icon {
+            width: 60px; height: 60px;
+            margin: 0 auto 18px;
+            background: var(--ln-icon-grad);
+            border-radius: 16px;
+            display: flex; align-items: center; justify-content: center;
+            font-size: 26px; color: var(--ln-icon-color);
+        }
+        .feature-card h2 {
+            font-size: 22px; font-weight: 700; color: #1e293b;
+            margin-bottom: 10px;
+        }
+        .feature-card p {
+            font-size: 14px; color: #64748b; line-height: 1.65;
+            margin-bottom: 24px;
+        }
+        .btn-start {
+            display: inline-flex; align-items: center; gap: 8px;
+            padding: 14px 40px; border-radius: 12px;
+            background: var(--ln-accent); color: var(--ln-accent-text);
+            font-size: 16px; font-weight: 600;
+            border: none; cursor: pointer;
+            transition: all 0.25s;
+            text-decoration: none;
+        }
+        .btn-start:hover {
+            background: var(--ln-accent-hover);
+            transform: translateY(-2px);
+            box-shadow: 0 8px 24px var(--ln-cta-shadow);
+        }
+
+        /* ===== User Menu (logged in) ===== */
+        .user-menu {
+            position: relative;
+        }
+        .user-avatar {
+            width: 36px; height: 36px;
+            border-radius: 50%; background: var(--ln-accent-grad);
+            color: #fff; display: flex; align-items: center; justify-content: center;
+            font-size: 14px; font-weight: 600; cursor: pointer;
+            border: 2px solid transparent;
+            transition: border-color 0.2s;
+        }
+        .user-avatar:hover { border-color: var(--ln-avatar-hover); }
+        .user-dropdown {
+            display: none; position: absolute; top: 46px; right: 0;
+            background: #fff; border-radius: 12px;
+            box-shadow: 0 12px 40px rgba(0,0,0,0.12);
+            min-width: 200px; padding: 8px 0;
+            border: 1px solid rgba(0,0,0,0.06);
+        }
+        .user-dropdown.show { display: block; }
+        .user-dropdown-header {
+            padding: 12px 16px; border-bottom: 1px solid #f1f5f9;
+        }
+        .user-dropdown-header .name { font-weight: 600; font-size: 14px; color: #1e293b; }
+        .user-dropdown-header .email { font-size: 12px; color: #94a3b8; }
+        .user-dropdown a {
+            display: flex; align-items: center; gap: 10px;
+            padding: 10px 16px; font-size: 14px; color: #4b5563;
+            text-decoration: none; transition: background 0.15s;
+        }
+        .user-dropdown a:hover { background: #f8fafc; }
+        .user-dropdown a i { width: 16px; text-align: center; color: #94a3b8; }
+        .user-dropdown .divider { height: 1px; background: #f1f5f9; margin: 4px 0; }
+        .user-dropdown .logout { color: #ef4444; }
+        .user-dropdown .logout i { color: #ef4444; }
+
+        /* ===== Footer ===== */
+        .footer {
+            text-align: center; padding: 16px 24px;
+            color: #94a3b8; font-size: 12px;
+            background: #fff; border-top: 1px solid #f1f5f9;
+        }
+
+        /* ===== Responsive ===== */
+        @media (max-width: 768px) {
+            .top-nav { padding: 0 20px; }
+            .nav-links { gap: 20px; }
+            .hero-title { font-size: 36px; }
+            .hero-subtitle { font-size: 16px; }
+            .feature-card { padding: 40px 28px; }
+        }
+    </style>
+    <script>
+        // Apply saved landing color theme before paint (default: Claude soft-yellow)
+        (function () {
+            try {
+                if (localStorage.getItem('pc_landing_theme') === 'blue') {
+                    document.documentElement.setAttribute('data-landing-theme', 'blue');
+                }
+            } catch (e) {}
+        })();
+    </script>
+</head>
+<body>
+    <!-- Top Navigation -->
+    <nav class="top-nav">
+        <a href="/" class="nav-brand">
+            <div class="brand-icon"><i class="fas fa-microscope"></i></div>
+            PathCopilot
+        </a>
+        <div class="nav-right">
+            <!-- Language Switcher -->
+            <div class="lang-switcher">
+                <button class="lang-btn active" id="btnEN" onclick="setLang('en')">EN</button>
+                <div class="lang-divider"></div>
+                <button class="lang-btn" id="btnZH" onclick="setLang('zh')">中文</button>
+            </div>
+
+            <!-- Color theme toggle (Claude yellow / blue) -->
+            <button class="theme-toggle" id="themeToggle" type="button" title="配色 / Color theme" aria-label="Toggle color theme">
+                <i class="fas fa-palette"></i>
+            </button>
+
+            {% if current_user %}
+                <div class="user-menu" id="userMenu">
+                    <div class="user-avatar" id="userAvatar">{{ current_user.username[0]|upper }}</div>
+                    <div class="user-dropdown" id="userDropdown">
+                        <div class="user-dropdown-header">
+                            <div class="name">{{ current_user.username }}</div>
+                            <div class="email">{{ current_user.email }}</div>
+                        </div>
+                        <a href="javascript:void(0)" onclick="openSettingsModal()"><i class="fas fa-cog"></i> Settings</a>
+                        <div class="divider"></div>
+                        <a href="/logout" class="logout"><i class="fas fa-sign-out-alt"></i> Logout</a>
+                    </div>
+                </div>
+            {% else %}
+                {% if local_mode %}
+                <a href="/login" class="btn-register" data-i18n="btn_enter">Enter</a>
+                {% else %}
+                <a href="/login" class="btn-login" data-i18n="nav_login">Login</a>
+                <a href="/register" class="btn-register" data-i18n="nav_register">Register</a>
+                {% endif %}
+            {% endif %}
+        </div>
+    </nav>
+
+    <!-- Hero Section -->
+    <section class="hero">
+        <div class="hero-bg-pattern"></div>
+        <div class="hero-dots">
+            <span style="left:10%;animation-delay:0s;animation-duration:18s"></span>
+            <span style="left:20%;animation-delay:2s;animation-duration:22s"></span>
+            <span style="left:35%;animation-delay:4s;animation-duration:16s"></span>
+            <span style="left:50%;animation-delay:1s;animation-duration:20s"></span>
+            <span style="left:65%;animation-delay:3s;animation-duration:24s"></span>
+            <span style="left:75%;animation-delay:5s;animation-duration:19s"></span>
+            <span style="left:88%;animation-delay:2.5s;animation-duration:21s"></span>
+        </div>
+        <div class="hero-content">
+            <h1 class="hero-title">PathCopilot</h1>
+            <p class="hero-subtitle" data-i18n="hero_sub">
+                Distributed agentic reasoning for patch-to-patient evidence synthesis and traceable pathology
+            </p>
+        </div>
+        <div class="scroll-indicator">
+            <i class="fas fa-chevron-down"></i>
+        </div>
+    </section>
+
+    <!-- Feature Card -->
+    <div class="feature-card-wrapper">
+        <div class="feature-card">
+            <div class="feature-icon">
+                <i class="fas fa-microscope"></i>
+            </div>
+            <h2 data-i18n="card_title">Agent Swarm-Driven Pathology Diagnosis</h2>
+            <p data-i18n="card_desc">
+                Multi-scale agentic pathology analysis including ROI detection, 
+                evidence-based reasoning, and traceable diagnostic reports.
+            </p>
+            {% if current_user %}
+                <a href="/workspace" class="btn-start">
+                    <span data-i18n="btn_start">Start experience</span> <i class="fas fa-arrow-right"></i>
+                </a>
+            {% else %}
+                <a href="/login" class="btn-start">
+                    <span data-i18n="btn_start">Start experience</span> <i class="fas fa-arrow-right"></i>
+                </a>
+            {% endif %}
+        </div>
+    </div>
+
+    <!-- Footer -->
+    <footer class="footer">
+        &copy; 2026 PathCopilot. Released under the MIT License.
+    </footer>
+
+    {% if current_user %}
+    <!-- Settings Modal (only for logged-in users) -->
+    <div class="ls-overlay" id="lsOverlay">
+        <div class="ls-modal">
+            <div class="ls-header">
+                <div class="ls-header-left">
+                    <div class="ls-header-icon"><i class="fas fa-cog"></i></div>
+                    <div>
+                        <h2 data-i18n="stg_title">LLM Settings</h2>
+                        <p data-i18n="stg_subtitle">Configure your AI model and API credentials</p>
+                    </div>
+                </div>
+                <button class="ls-close" onclick="closeSettingsModal()"><i class="fas fa-times"></i></button>
+            </div>
+
+            <div class="ls-body">
+                <div class="ls-section-title" data-i18n="stg_section">Model Configuration</div>
+
+                <div class="ls-provider-badge">
+                    <img src="https://openrouter.ai/favicon.ico" alt="" width="15" height="15">
+                    <span>OpenRouter</span>
+                    <a href="https://openrouter.ai/keys" target="_blank" class="ls-provider-link" data-i18n="stg_get_keys">Get API Keys <i class="fas fa-external-link-alt"></i></a>
+                </div>
+
+                <div class="ls-default-notice">
+                    <i class="fas fa-info-circle"></i>
+                    <span data-i18n="settings_default_notice">PathCopilot defaults to <code>gemini-3.1-pro-preview</code>. You can customize the model below.</span>
+                </div>
+
+                <div class="ls-field">
+                    <label data-i18n="stg_model_name">Model Name</label>
+                    <div class="ls-input-wrapper">
+                        <i class="fas fa-robot"></i>
+                        <input type="text" id="lsModel" placeholder="e.g. google/gemini-3.1-pro-preview">
+                    </div>
+                    <div class="ls-model-presets" id="modelPresets">
+                        <span class="ls-preset-chip" onclick="document.getElementById('lsModel').value='google/gemini-3.1-pro-preview'">gemini-3.1-pro</span>
+                        <span class="ls-preset-chip" onclick="document.getElementById('lsModel').value='google/gemini-2.0-flash-001'">gemini-2.0-flash</span>
+                        <span class="ls-preset-chip" onclick="document.getElementById('lsModel').value='anthropic/claude-sonnet-4-5'">claude-sonnet-4.5</span>
+                        <span class="ls-preset-chip" onclick="document.getElementById('lsModel').value='openai/gpt-4o'">gpt-4o</span>
+                    </div>
+                    <span class="ls-hint" data-i18n="stg_browse_models">Browse all models at <a href="https://openrouter.ai/models" target="_blank">openrouter.ai/models</a></span>
+                </div>
+
+                <div class="ls-field">
+                    <label><span data-i18n="stg_api_keys">API Keys</span> <span class="ls-key-count" id="lsKeyCount">(0)</span></label>
+                    <div id="lsKeysList" class="ls-keys-list"></div>
+                    <button class="ls-add-key-btn" onclick="lsAddKeyRow()">
+                        <i class="fas fa-plus"></i> <span data-i18n="stg_add_key">Add API Key</span>
+                    </button>
+                    <span class="ls-hint" data-i18n="stg_multi_key_hint">Multiple keys enable automatic rotation and failover.</span>
+                </div>
+
+                <div class="ls-test-row">
+                    <button class="ls-test-btn" onclick="testConnection()">
+                        <i class="fas fa-plug"></i> <span data-i18n="stg_test">Test Connection</span>
+                    </button>
+                    <span class="ls-test-result" id="lsTestResult"></span>
+                </div>
+            </div>
+
+            <div class="ls-footer">
+                <button class="ls-cancel" onclick="closeSettingsModal()" data-i18n="stg_cancel">Cancel</button>
+                <button class="ls-save" onclick="saveSettings()">
+                    <i class="fas fa-check"></i> <span data-i18n="stg_save">Save Settings</span>
+                </button>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+
+    <style>
+    /* ===== Settings Modal ===== */
+    .ls-overlay {
+        display: none; position: fixed; inset: 0; z-index: 9999;
+        background: rgba(15,23,42,0.45);
+        backdrop-filter: blur(6px);
+        align-items: center; justify-content: center;
+    }
+    .ls-overlay.open { display: flex; }
+    .ls-modal {
+        background: #fff; border-radius: 20px;
+        width: 540px; max-width: 95vw; max-height: 90vh;
+        overflow-y: auto;
+        box-shadow: 0 32px 80px rgba(0,0,0,0.18);
+        animation: lsIn 0.25s cubic-bezier(.34,1.3,.64,1);
+    }
+    @keyframes lsIn {
+        from { opacity:0; transform: translateY(20px) scale(.96); }
+        to   { opacity:1; transform: translateY(0)   scale(1);    }
+    }
+    .ls-header {
+        display: flex; align-items: flex-start; justify-content: space-between;
+        padding: 24px 28px 20px;
+        border-bottom: 1px solid #f1f5f9;
+    }
+    .ls-header-left { display: flex; align-items: flex-start; gap: 14px; }
+    .ls-header-icon {
+        width: 44px; height: 44px; border-radius: 12px;
+        background: linear-gradient(135deg, #eff6ff, #dbeafe);
+        display: flex; align-items: center; justify-content: center;
+        font-size: 20px; color: #1a56db; flex-shrink: 0;
+    }
+    .ls-header h2 { font-size: 18px; font-weight: 700; color: #1e293b; margin-bottom: 2px; }
+    .ls-header p  { font-size: 13px; color: #94a3b8; }
+    .ls-close {
+        width: 34px; height: 34px; border: none; background: none;
+        border-radius: 8px; cursor: pointer; color: #94a3b8; font-size: 16px;
+        display: flex; align-items: center; justify-content: center;
+        transition: all .15s; flex-shrink: 0; margin-top: -2px;
+    }
+    .ls-close:hover { background: #f1f5f9; color: #475569; }
+    .ls-body { padding: 24px 28px; display: flex; flex-direction: column; gap: 20px; }
+    .ls-section-title {
+        font-size: 11px; font-weight: 700; letter-spacing: 1px;
+        color: #94a3b8; text-transform: uppercase; margin-bottom: -8px;
+    }
+    .ls-field { display: flex; flex-direction: column; gap: 6px; }
+    .ls-field label {
+        font-size: 13px; font-weight: 600; color: #374151;
+        display: flex; align-items: center; gap: 8px;
+    }
+    .ls-badge {
+        font-size: 10px; font-weight: 600; padding: 2px 7px;
+        background: #eff6ff; color: #1a56db; border-radius: 999px;
+        text-transform: uppercase; letter-spacing: .5px;
+    }
+    .ls-select-wrapper {
+        position: relative;
+    }
+    .ls-select-wrapper select {
+        width: 100%; appearance: none; padding: 10px 36px 10px 14px;
+        border: 1.5px solid #e5e7eb; border-radius: 10px;
+        font-size: 14px; font-family: inherit; background: #f8fafc;
+        color: #1e293b; outline: none; cursor: pointer;
+        transition: border-color .15s, box-shadow .15s;
+    }
+    .ls-select-wrapper select:focus { border-color: #3b82f6; box-shadow: 0 0 0 3px rgba(59,130,246,.1); background: #fff; }
+    .ls-select-wrapper > i {
+        position: absolute; right: 12px; top: 50%; transform: translateY(-50%);
+        color: #94a3b8; font-size: 12px; pointer-events: none;
+    }
+    .ls-input-wrapper {
+        position: relative;
+    }
+    .ls-input-wrapper > i:first-child {
+        position: absolute; left: 13px; top: 50%; transform: translateY(-50%);
+        color: #94a3b8; font-size: 13px; pointer-events: none;
+    }
+    .ls-input-wrapper input {
+        width: 100%; padding: 10px 42px 10px 38px;
+        border: 1.5px solid #e5e7eb; border-radius: 10px;
+        font-size: 14px; font-family: inherit; background: #f8fafc;
+        outline: none; transition: border-color .15s, box-shadow .15s;
+    }
+    .ls-input-wrapper input:focus { border-color: #3b82f6; box-shadow: 0 0 0 3px rgba(59,130,246,.1); background: #fff; }
+    .ls-eye-btn {
+        position: absolute; right: 8px; top: 50%; transform: translateY(-50%);
+        border: none; background: none; cursor: pointer;
+        color: #94a3b8; font-size: 14px; padding: 6px;
+        border-radius: 6px; transition: all .15s;
+    }
+    .ls-eye-btn:hover { color: #6b7280; background: #f1f5f9; }
+    .ls-hint { font-size: 12px; color: #94a3b8; }
+    .ls-provider-badge {
+        display: flex; align-items: center; gap: 8px;
+        background: #f0f6ff; border: 1px solid #dbeafe;
+        border-radius: 8px; padding: 10px 14px; margin-bottom: 16px;
+        font-size: 13px; font-weight: 600; color: #1e40af;
+    }
+    .ls-provider-link {
+        margin-left: auto; font-size: 12px; font-weight: 500;
+        color: #3b82f6; text-decoration: none;
+    }
+    .ls-provider-link:hover { text-decoration: underline; }
+    .ls-default-notice {
+        display: flex; align-items: flex-start; gap: 8px;
+        background: #fffbeb; border: 1px solid #fde68a;
+        border-radius: 8px; padding: 10px 14px; margin-bottom: 16px;
+        font-size: 13px; color: #92400e; line-height: 1.5;
+    }
+    .ls-default-notice i { color: #f59e0b; flex-shrink: 0; margin-top: 2px; }
+    .ls-default-notice code {
+        background: #fef3c7; border-radius: 4px;
+        padding: 1px 5px; font-size: 12px; color: #78350f;
+    }
+    .ls-key-count { font-weight: 400; color: #94a3b8; font-size: 12px; }
+    .ls-keys-list { display: flex; flex-direction: column; gap: 8px; margin-bottom: 8px; }
+    .ls-key-row { display: flex; align-items: center; gap: 6px; }
+    .ls-key-input {
+        flex: 1; padding: 9px 12px;
+        border: 1.5px solid #e5e7eb; border-radius: 8px;
+        font-size: 13px; font-family: monospace;
+        background: #f9fafb; outline: none;
+        transition: border-color .15s, box-shadow .15s;
+    }
+    .ls-key-input:focus { border-color: #3b82f6; box-shadow: 0 0 0 3px rgba(59,130,246,.08); background: #fff; }
+    .ls-key-toggle, .ls-key-remove {
+        width: 32px; height: 32px; border: none; border-radius: 6px;
+        display: flex; align-items: center; justify-content: center;
+        cursor: pointer; font-size: 13px; transition: all .15s; flex-shrink: 0;
+    }
+    .ls-key-toggle { background: #f1f5f9; color: #64748b; }
+    .ls-key-toggle:hover { background: #e2e8f0; }
+    .ls-key-remove { background: none; color: #cbd5e1; }
+    .ls-key-remove:hover { background: #fef2f2; color: #ef4444; }
+    .ls-add-key-btn {
+        display: inline-flex; align-items: center; gap: 6px;
+        padding: 7px 14px; border: 1.5px dashed #d1d5db;
+        border-radius: 8px; background: none;
+        color: #6b7280; font-size: 12px; font-weight: 500;
+        font-family: inherit; cursor: pointer; margin-bottom: 4px;
+        transition: all .15s;
+    }
+    .ls-add-key-btn:hover { border-color: #3b82f6; color: #3b82f6; background: #f0f6ff; }
+    .ls-model-presets {
+        display: flex; flex-wrap: wrap; gap: 6px; margin-top: 4px;
+    }
+    .ls-preset-chip {
+        padding: 4px 10px; border-radius: 999px; font-size: 12px;
+        border: 1.5px solid #e5e7eb; background: #f8fafc; color: #4b5563;
+        cursor: pointer; transition: all .15s; font-family: monospace;
+    }
+    .ls-preset-chip:hover { border-color: #3b82f6; color: #1a56db; background: #eff6ff; }
+    .ls-test-row {
+        display: flex; align-items: center; gap: 12px;
+        padding: 14px 16px; background: #f8fafc; border-radius: 10px;
+        border: 1.5px dashed #e5e7eb;
+    }
+    .ls-test-btn {
+        display: flex; align-items: center; gap: 6px;
+        padding: 8px 18px; border: none; border-radius: 8px;
+        background: #1e293b; color: #fff;
+        font-size: 13px; font-weight: 600; font-family: inherit;
+        cursor: pointer; transition: all .2s; white-space: nowrap;
+    }
+    .ls-test-btn:hover { background: #0f172a; }
+    .ls-test-result { font-size: 13px; }
+    .ls-test-result.ok    { color: #16a34a; }
+    .ls-test-result.err   { color: #dc2626; }
+    .ls-test-result.loading { color: #64748b; }
+    .ls-footer {
+        display: flex; justify-content: flex-end; gap: 10px;
+        padding: 18px 28px;
+        border-top: 1px solid #f1f5f9;
+    }
+    .ls-cancel {
+        padding: 10px 22px; border-radius: 10px;
+        border: 1.5px solid #e5e7eb; background: #fff;
+        color: #4b5563; font-size: 14px; font-weight: 500;
+        font-family: inherit; cursor: pointer; transition: all .15s;
+    }
+    .ls-cancel:hover { background: #f8fafc; }
+    .ls-save {
+        padding: 10px 26px; border-radius: 10px;
+        border: none; background: #1a56db; color: #fff;
+        font-size: 14px; font-weight: 600; font-family: inherit;
+        cursor: pointer; transition: all .2s;
+        display: flex; align-items: center; gap: 7px;
+    }
+    .ls-save:hover { background: #1e40af; box-shadow: 0 6px 18px rgba(26,86,219,.28); }
+    </style>
+
+    <script>
+    // ===== i18n Language Switcher =====
+    const TRANSLATIONS = {
+        en: {
+            nav_contact:  'GitHub',
+            nav_login:    'Login',
+            nav_register: 'Register',
+            hero_sub:     'Distributed agentic reasoning for patch-to-patient evidence synthesis and traceable pathology',
+            card_title:   'Agent Swarm-Driven Pathology Diagnosis',
+            card_desc:    'Multi-scale agentic pathology analysis including ROI detection, evidence-based reasoning, and traceable diagnostic reports.',
+            btn_start:    'Start experience',
+            footer:       '&copy; 2026 PathCopilot. Released under the MIT License.',
+            settings_default_notice: 'PathCopilot defaults to <code>gemini-3.1-pro-preview</code>. You can customize the model below.',
+            stg_title:          'LLM Settings',
+            stg_subtitle:       'Configure your AI model and API credentials',
+            stg_section:        'Model Configuration',
+            stg_get_keys:       'Get API Keys <i class="fas fa-external-link-alt"></i>',
+            stg_model_name:     'Model Name',
+            stg_browse_models:  'Browse all models at <a href="https://openrouter.ai/models" target="_blank">openrouter.ai/models</a>',
+            stg_api_keys:       'API Keys',
+            stg_add_key:        'Add API Key',
+            stg_multi_key_hint: 'Multiple keys enable automatic rotation and failover.',
+            stg_test:           'Test Connection',
+            stg_cancel:         'Cancel',
+            stg_save:           'Save Settings',
+        },
+        zh: {
+            nav_contact:  'GitHub',
+            nav_login:    '登录',
+            nav_register: '注册',
+            hero_sub:     '面向病理切片的分布式智能体推理，实现从图像到患者的可追踪证据合成',
+            card_title:   '智能体蜂群驱动的病理诊断',
+            card_desc:    '多尺度智能体病理分析，涵盖 ROI 自动检测、循证推理与可追溯的诊断报告生成。',
+            btn_start:    '开始体验',
+            footer:       '&copy; 2026 PathCopilot. 保留所有权利。',
+            settings_default_notice: 'PathCopilot 默认使用 <code>gemini-3.1-pro-preview</code>，您可以通过以下选项自定义模型',
+            stg_title:          'LLM 设置',
+            stg_subtitle:       '配置 AI 模型和 API 密钥',
+            stg_section:        '模型配置',
+            stg_get_keys:       '获取 API 密钥 <i class="fas fa-external-link-alt"></i>',
+            stg_model_name:     '模型名称',
+            stg_browse_models:  '浏览所有模型：<a href="https://openrouter.ai/models" target="_blank">openrouter.ai/models</a>',
+            stg_api_keys:       'API 密钥',
+            stg_add_key:        '添加 API 密钥',
+            stg_multi_key_hint: '多个密钥支持自动轮换和故障切换。',
+            stg_test:           '测试连接',
+            stg_cancel:         '取消',
+            stg_save:           '保存设置',
+        }
+    };
+
+    let currentLang = localStorage.getItem('pc_lang') || 'en';
+
+    function applyLang(lang) {
+        const t = TRANSLATIONS[lang];
+        // nav & page elements
+        document.querySelectorAll('[data-i18n]').forEach(el => {
+            const key = el.getAttribute('data-i18n');
+            if (t[key] !== undefined) el.innerHTML = t[key];
+        });
+        // footer
+        const footer = document.querySelector('.footer');
+        if (footer) footer.innerHTML = t.footer;
+        // lang buttons
+        document.getElementById('btnEN').classList.toggle('active', lang === 'en');
+        document.getElementById('btnZH').classList.toggle('active', lang === 'zh');
+        document.documentElement.lang = lang;
+    }
+
+    function setLang(lang) {
+        currentLang = lang;
+        localStorage.setItem('pc_lang', lang);
+        applyLang(lang);
+    }
+
+    // Apply on load
+    applyLang(currentLang);
+
+    // ===== Landing color theme toggle =====
+    (function () {
+        const KEY = 'pc_landing_theme';
+        const btn = document.getElementById('themeToggle');
+        if (!btn) return;
+        btn.addEventListener('click', function () {
+            const root = document.documentElement;
+            const isBlue = root.getAttribute('data-landing-theme') === 'blue';
+            if (isBlue) {
+                root.removeAttribute('data-landing-theme');
+                try { localStorage.setItem(KEY, 'warm'); } catch (e) {}
+            } else {
+                root.setAttribute('data-landing-theme', 'blue');
+                try { localStorage.setItem(KEY, 'blue'); } catch (e) {}
+            }
+        });
+    })();
+
+    // ===== User dropdown =====
+    const avatar = document.getElementById('userAvatar');
+    const dropdown = document.getElementById('userDropdown');
+    if (avatar) {
+        avatar.addEventListener('click', (e) => {
+            e.stopPropagation();
+            dropdown.classList.toggle('show');
+        });
+        document.addEventListener('click', () => dropdown.classList.remove('show'));
+    }
+
+    // ===== Settings Modal (OpenRouter only, multi-key) =====
+    function lsAddKeyRow(value) {
+        const list = document.getElementById('lsKeysList');
+        const row = document.createElement('div');
+        row.className = 'ls-key-row';
+        row.innerHTML = `
+            <input type="password" class="ls-key-input" value="${value || ''}"
+                   placeholder="sk-or-v1-..." spellcheck="false" autocomplete="off">
+            <button class="ls-key-toggle" onclick="lsToggleKeyVis(this)" title="Show/Hide">
+                <i class="fas fa-eye"></i>
+            </button>
+            <button class="ls-key-remove" onclick="lsRemoveKeyRow(this)" title="Remove">
+                <i class="fas fa-trash-alt"></i>
+            </button>`;
+        list.appendChild(row);
+        lsUpdateKeyCount();
+    }
+    function lsRemoveKeyRow(btn) {
+        const list = document.getElementById('lsKeysList');
+        btn.closest('.ls-key-row').remove();
+        if (list.children.length === 0) lsAddKeyRow('');
+        lsUpdateKeyCount();
+    }
+    function lsToggleKeyVis(btn) {
+        const inp = btn.previousElementSibling;
+        const ico = btn.querySelector('i');
+        if (inp.type === 'password') { inp.type = 'text'; ico.className = 'fas fa-eye-slash'; }
+        else { inp.type = 'password'; ico.className = 'fas fa-eye'; }
+    }
+    function lsUpdateKeyCount() {
+        const keys = lsGetKeys();
+        document.getElementById('lsKeyCount').textContent = `(${keys.length})`;
+    }
+    function lsGetKeys() {
+        return [...document.querySelectorAll('#lsKeysList .ls-key-input')]
+            .map(i => i.value.trim()).filter(Boolean);
+    }
+
+    function openSettingsModal() {
+        const overlay = document.getElementById('lsOverlay');
+        if (!overlay) return;
+        overlay.classList.add('open');
+        document.getElementById('lsTestResult').textContent = '';
+        fetch('/api/user/settings')
+            .then(r => r.json())
+            .then(d => {
+                if (!d.success) return;
+                const s = d.settings;
+                document.getElementById('lsModel').value = s.llm_model || '';
+                const list = document.getElementById('lsKeysList');
+                list.innerHTML = '';
+                let keys = [];
+                try { keys = JSON.parse(s.api_key || '[]'); } catch(e) {}
+                if (typeof keys === 'string') keys = keys ? [keys] : [];
+                if (!Array.isArray(keys)) keys = [];
+                if (keys.length === 0) keys = [''];
+                keys.forEach(k => lsAddKeyRow(k));
+            })
+            .catch(() => { lsAddKeyRow(''); });
+    }
+
+    function closeSettingsModal() {
+        const overlay = document.getElementById('lsOverlay');
+        if (overlay) overlay.classList.remove('open');
+    }
+
+    function saveSettings() {
+        const keys = lsGetKeys();
+        if (keys.length === 0) {
+            const r = document.getElementById('lsTestResult');
+            r.className = 'ls-test-result err'; r.textContent = '⚠ Please add at least one API key'; return;
+        }
+        const btn = document.querySelector('.ls-save');
+        btn.disabled = true;
+        btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Saving...';
+        const data = {
+            llm_provider: 'openrouter',
+            api_url:      'https://openrouter.ai/api/v1/chat/completions',
+            llm_model:    document.getElementById('lsModel').value.trim(),
+            api_key:      JSON.stringify(keys)
+        };
+        fetch('/api/user/settings', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(data)
+        })
+        .then(r => r.json())
+        .then(res => {
+            if (res.success) { closeSettingsModal(); showToast('Settings saved!', 'ok'); }
+            else { showToast('Save failed: ' + (res.error || 'unknown'), 'err'); }
+        })
+        .catch(() => showToast('Network error', 'err'))
+        .finally(() => {
+            btn.disabled = false;
+            btn.innerHTML = '<i class="fas fa-check"></i> Save Settings';
+        });
+    }
+
+    function testConnection() {
+        const resultEl = document.getElementById('lsTestResult');
+        const keys = lsGetKeys();
+        if (keys.length === 0) {
+            resultEl.className = 'ls-test-result err'; resultEl.textContent = '⚠ Add an API key first'; return;
+        }
+        resultEl.className = 'ls-test-result loading';
+        resultEl.textContent = 'Testing...';
+        fetch('/api/user/test_llm', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                api_url:   'https://openrouter.ai/api/v1/chat/completions',
+                llm_model: document.getElementById('lsModel').value.trim(),
+                api_key:   keys[0]
+            })
+        })
+        .then(r => r.json())
+        .then(res => {
+            if (res.success) {
+                resultEl.className = 'ls-test-result ok';
+                resultEl.textContent = '✓ Connected successfully';
+            } else {
+                resultEl.className = 'ls-test-result err';
+                resultEl.textContent = '✗ ' + (res.error || 'Connection failed');
+            }
+        })
+        .catch(() => {
+            resultEl.className = 'ls-test-result err';
+            resultEl.textContent = '✗ Network error';
+        });
+    }
+
+    // Close on overlay click
+    document.getElementById('lsOverlay')?.addEventListener('click', function(e) {
+        if (e.target === this) closeSettingsModal();
+    });
+
+    function showToast(msg, type) {
+        const t = document.createElement('div');
+        t.style.cssText = `position:fixed;bottom:28px;right:28px;padding:12px 20px;border-radius:10px;
+            font-size:14px;font-weight:600;z-index:99999;animation:fadeInUp .3s ease;
+            background:${type==='ok'?'#16a34a':'#dc2626'};color:#fff;
+            box-shadow:0 8px 24px rgba(0,0,0,.15);`;
+        t.textContent = msg;
+        document.body.appendChild(t);
+        setTimeout(() => t.remove(), 3000);
+    }
+    </script>
+    <style>
+    @keyframes fadeInUp {
+        from { opacity:0; transform:translateY(12px); }
+        to   { opacity:1; transform:translateY(0); }
+    }
+    </style>
+</body>
+</html>

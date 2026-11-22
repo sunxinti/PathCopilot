@@ -1,0 +1,413 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PathCopilot - 专业WSI查看器</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+    <link href="{{ url_for('static', filename='vendor/font-awesome/css/all.min.css') }}" rel="stylesheet">
+    
+    <!-- OpenSeadragon CSS -->
+    <style>
+        #openseadragon {
+            width: 100%;
+            height: 100%;
+            background-color: #000;
+        }
+        
+        .professional-viewer {
+            display: flex;
+            height: 100vh;
+            background: #f5f5f5;
+        }
+        
+        .viewer-sidebar {
+            width: 320px;
+            background: white;
+            border-right: 1px solid #ddd;
+            display: flex;
+            flex-direction: column;
+            box-shadow: 2px 0 10px rgba(0,0,0,0.1);
+        }
+        
+        .viewer-main {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+        }
+        
+        .viewer-toolbar {
+            height: 60px;
+            background: white;
+            border-bottom: 1px solid #ddd;
+            display: flex;
+            align-items: center;
+            padding: 0 20px;
+            gap: 15px;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+        }
+        
+        .viewer-content {
+            flex: 1;
+            position: relative;
+        }
+        
+        .roi-controls {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            background: rgba(255,255,255,0.95);
+            padding: 15px;
+            border-radius: 8px;
+            box-shadow: 0 3px 15px rgba(0,0,0,0.2);
+            z-index: 1000;
+        }
+        
+        .measurement-info {
+            position: absolute;
+            bottom: 20px;
+            left: 20px;
+            background: rgba(0,0,0,0.8);
+            color: white;
+            padding: 10px 15px;
+            border-radius: 6px;
+            font-size: 12px;
+            font-family: monospace;
+        }
+        
+        .zoom-info {
+            position: absolute;
+            top: 20px;
+            left: 20px;
+            background: rgba(0,0,0,0.8);
+            color: white;
+            padding: 8px 12px;
+            border-radius: 6px;
+            font-size: 14px;
+            font-weight: bold;
+        }
+    </style>
+</head>
+<body>
+    <div class="professional-viewer">
+        <!-- 侧边栏 -->
+        <div class="viewer-sidebar">
+            <div class="sidebar-header">
+                <h2><i class="fas fa-microscope"></i> PathCopilot</h2>
+                <p>专业病理切片查看器</p>
+            </div>
+            
+            <div class="sidebar-content">
+                <!-- 文件信息 -->
+                <div class="section">
+                    <h3><i class="fas fa-info-circle"></i> 文件信息</h3>
+                    <div class="info-grid">
+                        <div class="info-item">
+                            <span>文件名:</span>
+                            <span id="fileName">{{ file_info.filename if file_info else '未选择' }}</span>
+                        </div>
+                        <div class="info-item">
+                            <span>原始尺寸:</span>
+                            <span id="imageDimensions">{{ file_info.dimensions[0] }}×{{ file_info.dimensions[1] if file_info else '- × -' }}</span>
+                        </div>
+                        <div class="info-item">
+                            <span>层级数量:</span>
+                            <span id="levelCount">{{ file_info.level_count if file_info else '-' }}</span>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- ROI分析 -->
+                <div class="section">
+                    <h3><i class="fas fa-crop"></i> 区域分析</h3>
+                    <div class="form-group">
+                        <label>分析问题:</label>
+                        <textarea id="analysisQuestion" rows="3" placeholder="请描述您想要分析的病理特征...">请分析选定区域的病理特征，包括细胞形态、组织结构和可能的病理改变。</textarea>
+                    </div>
+                    <button id="analyzeROI" class="btn-primary" disabled>
+                        <i class="fas fa-brain"></i> 分析选定区域
+                    </button>
+                </div>
+                
+                <!-- 测量工具 -->
+                <div class="section">
+                    <h3><i class="fas fa-ruler"></i> 测量工具</h3>
+                    <div class="tool-buttons">
+                        <button id="measureDistance" class="btn-tool">
+                            <i class="fas fa-arrows-alt-h"></i> 距离测量
+                        </button>
+                        <button id="measureArea" class="btn-tool">
+                            <i class="fas fa-vector-square"></i> 面积测量
+                        </button>
+                        <button id="clearMeasurements" class="btn-tool">
+                            <i class="fas fa-eraser"></i> 清除测量
+                        </button>
+                    </div>
+                </div>
+                
+                <!-- 显示设置 -->
+                <div class="section">
+                    <h3><i class="fas fa-palette"></i> 显示设置</h3>
+                    <div class="form-group">
+                        <label>亮度:</label>
+                        <input type="range" id="brightness" min="0.5" max="2" step="0.1" value="1">
+                    </div>
+                    <div class="form-group">
+                        <label>对比度:</label>
+                        <input type="range" id="contrast" min="0.5" max="2" step="0.1" value="1">
+                    </div>
+                    <div class="form-group">
+                        <label>饱和度:</label>
+                        <input type="range" id="saturation" min="0" max="2" step="0.1" value="1">
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- 主查看区域 -->
+        <div class="viewer-main">
+            <!-- 工具栏 -->
+            <div class="viewer-toolbar">
+                <button id="zoomIn" class="btn-toolbar" title="放大">
+                    <i class="fas fa-search-plus"></i>
+                </button>
+                <button id="zoomOut" class="btn-toolbar" title="缩小">
+                    <i class="fas fa-search-minus"></i>
+                </button>
+                <button id="home" class="btn-toolbar" title="适合窗口">
+                    <i class="fas fa-home"></i>
+                </button>
+                <button id="fullscreen" class="btn-toolbar" title="全屏">
+                    <i class="fas fa-expand"></i>
+                </button>
+                
+                <div class="separator"></div>
+                
+                <button id="selectROI" class="btn-toolbar active" title="选择ROI">
+                    <i class="fas fa-crop"></i>
+                </button>
+                <button id="panMode" class="btn-toolbar" title="平移模式">
+                    <i class="fas fa-hand-paper"></i>
+                </button>
+                
+                <div class="separator"></div>
+                
+                <button id="snapshot" class="btn-toolbar" title="截图">
+                    <i class="fas fa-camera"></i>
+                </button>
+                <button id="exportROI" class="btn-toolbar" title="导出ROI">
+                    <i class="fas fa-download"></i>
+                </button>
+            </div>
+            
+            <!-- 查看器内容 -->
+            <div class="viewer-content">
+                <div id="openseadragon"></div>
+                
+                <!-- 缩放信息 -->
+                <div class="zoom-info" id="zoomInfo">
+                    缩放: 100%
+                </div>
+                
+                <!-- 测量信息 -->
+                <div class="measurement-info" id="measurementInfo" style="display: none;">
+                    <div>距离: <span id="distanceValue">0 μm</span></div>
+                    <div>面积: <span id="areaValue">0 μm²</span></div>
+                </div>
+                
+                <!-- ROI控制面板 -->
+                <div class="roi-controls" id="roiControls" style="display: none;">
+                    <h4><i class="fas fa-crop"></i> ROI选择</h4>
+                    <div class="roi-info">
+                        <div>位置: <span id="roiPosition">-</span></div>
+                        <div>大小: <span id="roiSize">-</span></div>
+                    </div>
+                    <div class="roi-buttons">
+                        <button id="confirmROI" class="btn-success">
+                            <i class="fas fa-check"></i> 确认
+                        </button>
+                        <button id="cancelROI" class="btn-secondary">
+                            <i class="fas fa-times"></i> 取消
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- OpenSeadragon JavaScript -->
+    <script src="{{ url_for('static', filename='vendor/openseadragon/openseadragon.min.js') }}"></script>
+    
+    <script>
+        // 专业WSI查看器类
+        class ProfessionalWSIViewer {
+            constructor(dziUrl) {
+                this.dziUrl = dziUrl;
+                this.currentROI = null;
+                this.measurements = [];
+                this.init();
+            }
+            
+            init() {
+                            // 初始化OpenSeadragon查看器
+            this.viewer = OpenSeadragon({
+                id: "openseadragon",
+                prefixUrl: "/static/vendor/openseadragon/images/",
+                tileSources: this.dziUrl,
+                    showNavigator: true,
+                    navigatorPosition: 'BOTTOM_RIGHT',
+                    navigatorSizeRatio: 0.15,
+                    showNavigationControl: false,
+                    showZoomControl: false,
+                    showHomeControl: false,
+                    showFullPageControl: false,
+                    gestureSettingsMouse: {
+                        clickToZoom: false,
+                        dblClickToZoom: true,
+                        pinchToZoom: true,
+                        flickEnabled: true,
+                        flickMinSpeed: 120,
+                        flickMomentum: 0.25
+                    }
+                });
+                
+                this.setupEventHandlers();
+                this.setupToolbar();
+                this.setupROISelection();
+            }
+            
+            setupEventHandlers() {
+                // 缩放信息更新
+                this.viewer.addHandler('zoom', (event) => {
+                    const zoom = Math.round(event.zoom * 100);
+                    document.getElementById('zoomInfo').textContent = `缩放: ${zoom}%`;
+                });
+                
+                // 鼠标位置跟踪
+                this.viewer.addHandler('canvas-click', (event) => {
+                    const webPoint = event.position;
+                    const viewportPoint = this.viewer.viewport.pointFromPixel(webPoint);
+                    const imagePoint = this.viewer.viewport.viewportToImageCoordinates(viewportPoint);
+                    console.log('图像坐标:', imagePoint);
+                });
+            }
+            
+            setupToolbar() {
+                document.getElementById('zoomIn').onclick = () => this.viewer.viewport.zoomBy(1.5);
+                document.getElementById('zoomOut').onclick = () => this.viewer.viewport.zoomBy(0.67);
+                document.getElementById('home').onclick = () => this.viewer.viewport.goHome();
+                document.getElementById('fullscreen').onclick = () => this.viewer.setFullScreen(!this.viewer.isFullScreen());
+                
+                // 显示设置
+                document.getElementById('brightness').oninput = (e) => this.updateImageFilters();
+                document.getElementById('contrast').oninput = (e) => this.updateImageFilters();
+                document.getElementById('saturation').oninput = (e) => this.updateImageFilters();
+            }
+            
+            setupROISelection() {
+                // ROI选择逻辑将在这里实现
+                let isSelecting = false;
+                let selectionStart = null;
+                
+                document.getElementById('selectROI').onclick = () => {
+                    // 切换到ROI选择模式
+                    this.setMode('roi');
+                };
+                
+                document.getElementById('panMode').onclick = () => {
+                    // 切换到平移模式
+                    this.setMode('pan');
+                };
+            }
+            
+            setMode(mode) {
+                const roiBtn = document.getElementById('selectROI');
+                const panBtn = document.getElementById('panMode');
+                
+                if (mode === 'roi') {
+                    roiBtn.classList.add('active');
+                    panBtn.classList.remove('active');
+                    // 启用ROI选择
+                } else {
+                    panBtn.classList.add('active');
+                    roiBtn.classList.remove('active');
+                    // 启用平移模式
+                }
+            }
+            
+            updateImageFilters() {
+                const brightness = document.getElementById('brightness').value;
+                const contrast = document.getElementById('contrast').value;
+                const saturation = document.getElementById('saturation').value;
+                
+                const canvas = this.viewer.canvas;
+                canvas.style.filter = `brightness(${brightness}) contrast(${contrast}) saturate(${saturation})`;
+            }
+        }
+        
+        // 页面加载完成后初始化
+        document.addEventListener('DOMContentLoaded', function() {
+            {% if file_info %}
+            // 如果有文件信息，生成DZI并初始化查看器
+            generateDZIAndInitViewer('{{ file_info.file_id }}');
+            {% else %}
+            // 显示文件选择界面
+            showFileSelector();
+            {% endif %}
+        });
+        
+        async function generateDZIAndInitViewer(fileId) {
+            try {
+                showLoading('正在生成高质量瓦片，请稍候...');
+                
+                const response = await fetch(`/api/generate_dzi/${fileId}`);
+                const result = await response.json();
+                
+                if (result.success) {
+                    hideLoading();
+                    // 初始化专业查看器
+                    window.wsiViewer = new ProfessionalWSIViewer(result.dzi_url);
+                } else {
+                    hideLoading();
+                    alert('生成瓦片失败: ' + result.error);
+                }
+            } catch (error) {
+                hideLoading();
+                alert('处理失败: ' + error.message);
+            }
+        }
+        
+        function showLoading(message) {
+            // 显示加载提示
+            const loading = document.createElement('div');
+            loading.id = 'loading';
+            loading.innerHTML = `
+                <div style="position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); 
+                           background: rgba(0,0,0,0.8); color: white; padding: 20px; border-radius: 8px; z-index: 9999;">
+                    <i class="fas fa-spinner fa-spin"></i> ${message}
+                </div>
+            `;
+            document.body.appendChild(loading);
+        }
+        
+        function hideLoading() {
+            const loading = document.getElementById('loading');
+            if (loading) loading.remove();
+        }
+        
+        function showFileSelector() {
+            document.querySelector('.viewer-content').innerHTML = `
+                <div style="display: flex; align-items: center; justify-content: center; height: 100%; 
+                           flex-direction: column; color: #666;">
+                    <i class="fas fa-upload" style="font-size: 64px; margin-bottom: 20px;"></i>
+                    <h2>请先上传WSI文件</h2>
+                    <p>支持 .svs, .ndpi, .vms 等格式</p>
+                    <button onclick="window.location.href='/'" class="btn-primary" style="margin-top: 20px;">
+                        <i class="fas fa-upload"></i> 上传文件
+                    </button>
+                </div>
+            `;
+        }
+    </script>
+</body>
+</html>

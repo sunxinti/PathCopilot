@@ -1,0 +1,165 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PathGPT</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+    <link href="{{ url_for('static', filename='vendor/font-awesome/css/all.min.css') }}" rel="stylesheet">
+    <!-- OpenSeadragon for professional WSI viewing -->
+    <script src="{{ url_for('static', filename='vendor/openseadragon/openseadragon.min.js') }}"></script>
+</head>
+<body>
+    <div class="app-container">
+        <!-- 侧边栏 -->
+        <div class="sidebar">
+            <div class="sidebar-header">
+                <h2><i class="fas fa-microscope"></i> PathCopilot</h2>
+                <p>病理切片智能分析</p>
+            </div>
+            
+            <div class="sidebar-content">
+                <!-- 文件上传区域 -->
+                <div class="upload-section">
+                    <h3><i class="fas fa-upload"></i> 上传切片</h3>
+                    <div class="upload-area" id="uploadArea">
+                        <input type="file" id="fileInput" accept=".svs,.ndpi,.vms,.vmu,.scn,.mrxs,.tiff,.tif" style="display: none;">
+                        <div class="upload-content">
+                            <i class="fas fa-cloud-upload-alt"></i>
+                            <p>点击或拖拽上传WSI文件</p>
+                            <small>支持 .svs, .ndpi, .vms, .vmu, .scn, .mrxs, .tiff 格式，最大2GB</small>
+                        </div>
+                    </div>
+                    <div class="upload-progress" id="uploadProgress" style="display: none;">
+                        <div class="progress-bar">
+                            <div class="progress-fill" id="progressFill"></div>
+                        </div>
+                        <span id="progressText">上传中...</span>
+                    </div>
+                </div>
+
+                <!-- 文件列表 -->
+                <div class="files-section">
+                    <h3><i class="fas fa-folder-open"></i> 已上传文件</h3>
+                    <div class="files-list" id="filesList">
+                        <p class="no-files">暂无上传文件</p>
+                    </div>
+                </div>
+
+                <!-- 分析设置 -->
+                <div class="analysis-section">
+                    <h3><i class="fas fa-cog"></i> 分析设置</h3>
+                    <div class="form-group">
+                        <label for="analysisQuestion">分析问题：</label>
+                        <textarea id="analysisQuestion" placeholder="请输入您想要分析的具体问题..." rows="3">请分析这个病理切片的ROI区域，包括细胞形态学特征、组织结构特征、病理改变、可能的诊断和建议的进一步检查。</textarea>
+                    </div>
+                    <button id="analyzeBtn" class="btn-primary" disabled>
+                        <i class="fas fa-brain"></i> 开始分析
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- 主内容区域 -->
+        <div class="main-content">
+            <!-- 顶部工具栏 -->
+            <div class="toolbar">
+                <div class="toolbar-left">
+                    <h1>Slide View</h1>
+                    <span id="fileInfo" class="file-info"></span>
+                </div>
+                <div class="toolbar-right">
+                    <button id="zoomIn" class="btn-secondary">
+                        <i class="fas fa-search-plus"></i> 放大
+                    </button>
+                    <button id="zoomOut" class="btn-secondary">
+                        <i class="fas fa-search-minus"></i> 缩小
+                    </button>
+                    <button id="clearROI" class="btn-secondary" disabled>
+                        <i class="fas fa-eraser"></i> 清除选区
+                    </button>
+                    <button id="resetView" class="btn-secondary">
+                        <i class="fas fa-home"></i> 重置视图
+                    </button>
+                </div>
+            </div>
+
+            <!-- 图像查看区域 -->
+            <div class="viewer-container">
+                <div class="image-viewer" id="imageViewer">
+                                    <div class="placeholder" id="placeholder">
+                    <i class="fas fa-image"></i>
+                    <p>请上传WSI文件以开始分析</p>
+                    <div class="usage-tips">
+                        <h4>使用说明：</h4>
+                        <ul>
+                            <li><i class="fas fa-mouse-pointer"></i> 鼠标滚轮：缩放图像</li>
+                            <li><i class="fas fa-hand-rock"></i> 右键拖拽：平移图像</li>
+                            <li><i class="fas fa-crop"></i> 左键拖拽：选择ROI区域</li>
+                            <li><i class="fas fa-mobile-alt"></i> 双指手势：触摸缩放</li>
+                        </ul>
+                    </div>
+                </div>
+                    <canvas id="imageCanvas" style="display: none;"></canvas>
+                    <div id="openseadragon-main" style="width: 100%; height: 100%; display: none;"></div>
+                    <div class="roi-overlay" id="roiOverlay"></div>
+                </div>
+                
+                <!-- 图像信息面板 -->
+                <div class="info-panel" id="infoPanel" style="display: none;">
+                    <h4>图像信息</h4>
+                    <div class="info-item">
+                        <span>原始尺寸：</span>
+                        <span id="originalDimensions">-</span>
+                    </div>
+                    <div class="info-item">
+                        <span>层级数量：</span>
+                        <span id="levelCount">-</span>
+                    </div>
+                    <div class="info-item">
+                        <span>当前选区：</span>
+                        <span id="currentROI">未选择</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 结果面板 -->
+        <div class="results-panel" id="resultsPanel">
+            <div class="panel-header">
+                <h3><i class="fas fa-chart-line"></i> 分析结果</h3>
+                <button id="closeResults" class="btn-close">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            <div class="panel-content">
+                <div class="loading" id="analysisLoading" style="display: none;">
+                    <i class="fas fa-spinner fa-spin"></i>
+                    <p>GPT正在分析中，请稍候...</p>
+                </div>
+                <div class="analysis-results" id="analysisResults"></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 模态对话框 -->
+    <div class="modal" id="errorModal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3>错误</h3>
+                <button class="btn-close" onclick="closeModal('errorModal')">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            <div class="modal-body">
+                <p id="errorMessage"></p>
+            </div>
+            <div class="modal-footer">
+                <button class="btn-primary" onclick="closeModal('errorModal')">确定</button>
+            </div>
+        </div>
+    </div>
+
+    <script src="{{ url_for('static', filename='script.js') }}"></script>
+</body>
+</html>

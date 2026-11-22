@@ -1,0 +1,229 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Verify Email - PathCopilot</title>
+    <link href="{{ url_for('static', filename='vendor/font-awesome/css/all.min.css') }}" rel="stylesheet">
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+            min-height: 100vh;
+            display: flex;
+            background: linear-gradient(165deg, #1a56db 0%, #3b82f6 40%, #60a5fa 70%, #dbeafe 100%);
+        }
+        .auth-container { display: flex; width: 100%; min-height: 100vh; }
+        .auth-left {
+            flex: 1; display: flex; flex-direction: column;
+            align-items: center; justify-content: center;
+            padding: 48px; color: #fff;
+        }
+        .auth-left-content { text-align: center; max-width: 420px; }
+        .auth-left h1 { font-size: 42px; font-weight: 800; margin-bottom: 16px; letter-spacing: -0.5px; }
+        .auth-left p { font-size: 16px; line-height: 1.6; color: rgba(255,255,255,0.85); }
+        .auth-left .brand-icon {
+            width: 64px; height: 64px; margin: 0 auto 24px;
+            background: rgba(255,255,255,0.15); border-radius: 18px;
+            display: flex; align-items: center; justify-content: center;
+            font-size: 30px; backdrop-filter: blur(8px);
+        }
+        .auth-right {
+            width: 480px; background: #fff;
+            display: flex; align-items: center; justify-content: center;
+            padding: 48px;
+            box-shadow: -20px 0 60px rgba(0,0,0,0.08);
+        }
+        .auth-form-wrapper { width: 100%; max-width: 360px; text-align: center; }
+        .auth-form-wrapper h2 { font-size: 28px; font-weight: 700; color: #1e293b; margin-bottom: 8px; }
+        .auth-form-wrapper .subtitle { font-size: 14px; color: #94a3b8; margin-bottom: 8px; }
+        .email-badge {
+            display: inline-block; background: #f1f5f9; border-radius: 20px;
+            padding: 6px 16px; font-size: 13px; color: #475569;
+            font-weight: 500; margin-bottom: 28px;
+        }
+        .email-badge i { color: #3b82f6; margin-right: 6px; }
+        .code-inputs {
+            display: flex; gap: 10px; justify-content: center; margin-bottom: 24px;
+        }
+        .code-inputs input {
+            width: 48px; height: 56px; text-align: center;
+            font-size: 24px; font-weight: 700; font-family: 'Inter', monospace;
+            border: 2px solid #e2e8f0; border-radius: 12px;
+            outline: none; background: #f8fafc;
+            transition: all 0.2s;
+        }
+        .code-inputs input:focus {
+            border-color: #3b82f6;
+            box-shadow: 0 0 0 3px rgba(59,130,246,0.15);
+            background: #fff;
+        }
+        .code-inputs input.filled {
+            border-color: #3b82f6; background: #eff6ff;
+        }
+        .btn-submit {
+            width: 100%; padding: 13px; border: none; border-radius: 10px;
+            background: #1a56db; color: #fff;
+            font-size: 15px; font-weight: 600; font-family: inherit;
+            cursor: pointer; transition: all 0.2s;
+        }
+        .btn-submit:hover { background: #1e40af; box-shadow: 0 6px 20px rgba(26,86,219,0.3); }
+        .btn-submit:disabled { background: #94a3b8; cursor: not-allowed; box-shadow: none; }
+        .resend-section {
+            margin-top: 24px; font-size: 13px; color: #64748b;
+        }
+        .resend-btn {
+            background: none; border: none; color: #1a56db;
+            font-weight: 600; font-size: 13px; cursor: pointer;
+            font-family: inherit; text-decoration: none;
+        }
+        .resend-btn:hover { text-decoration: underline; }
+        .resend-btn:disabled { color: #94a3b8; cursor: not-allowed; text-decoration: none; }
+        .error-msg {
+            background: #fef2f2; color: #dc2626; padding: 10px 14px;
+            border-radius: 8px; font-size: 13px; margin-bottom: 20px;
+            border: 1px solid #fecaca; display: none;
+        }
+        .error-msg.show { display: block; }
+        .success-msg {
+            background: #f0fdf4; color: #16a34a; padding: 10px 14px;
+            border-radius: 8px; font-size: 13px; margin-bottom: 20px;
+            border: 1px solid #bbf7d0; display: none;
+        }
+        .success-msg.show { display: block; }
+        .back-link {
+            position: fixed; top: 24px; left: 24px;
+            color: rgba(255,255,255,0.8); text-decoration: none;
+            font-size: 14px; font-weight: 500;
+            display: flex; align-items: center; gap: 6px;
+            transition: color 0.2s;
+        }
+        .back-link:hover { color: #fff; }
+        @media (max-width: 900px) {
+            .auth-left { display: none; }
+            .auth-right { width: 100%; }
+        }
+    </style>
+</head>
+<body>
+    <a href="/register" class="back-link"><i class="fas fa-arrow-left"></i> Back</a>
+    <div class="auth-container">
+        <div class="auth-left">
+            <div class="auth-left-content">
+                <div class="brand-icon"><i class="fas fa-microscope"></i></div>
+                <h1>PathCopilot</h1>
+                <p>Distributed agentic reasoning for patch-to-patient evidence synthesis and traceable pathology</p>
+            </div>
+        </div>
+        <div class="auth-right">
+            <div class="auth-form-wrapper">
+                <h2>Verify your email</h2>
+                <p class="subtitle">We sent a 6-digit code to</p>
+                <div class="email-badge"><i class="fas fa-envelope"></i>{{ email }}</div>
+
+                <div class="error-msg" id="errorMsg">{{ error or '' }}</div>
+                <div class="success-msg" id="successMsg"></div>
+
+                <form id="verifyForm" method="POST" action="/verify">
+                    <div class="code-inputs">
+                        <input type="text" name="code1" maxlength="1" inputmode="numeric" pattern="[0-9]" autocomplete="one-time-code" autofocus>
+                        <input type="text" name="code2" maxlength="1" inputmode="numeric" pattern="[0-9]">
+                        <input type="text" name="code3" maxlength="1" inputmode="numeric" pattern="[0-9]">
+                        <input type="text" name="code4" maxlength="1" inputmode="numeric" pattern="[0-9]">
+                        <input type="text" name="code5" maxlength="1" inputmode="numeric" pattern="[0-9]">
+                        <input type="text" name="code6" maxlength="1" inputmode="numeric" pattern="[0-9]">
+                    </div>
+                    <button type="submit" class="btn-submit" id="submitBtn" disabled>Verify</button>
+                </form>
+
+                <div class="resend-section">
+                    Didn't receive the code?
+                    <button class="resend-btn" id="resendBtn" onclick="resendCode()">Resend code</button>
+                    <span id="cooldownText" style="display:none; color:#94a3b8;"></span>
+                </div>
+            </div>
+        </div>
+    </div>
+    <script>
+    const inputs = document.querySelectorAll('.code-inputs input');
+    const submitBtn = document.getElementById('submitBtn');
+
+    function checkComplete() {
+        const filled = [...inputs].every(i => i.value.length === 1);
+        submitBtn.disabled = !filled;
+        inputs.forEach(i => i.classList.toggle('filled', i.value.length === 1));
+    }
+
+    inputs.forEach((input, idx) => {
+        input.addEventListener('input', e => {
+            const v = e.target.value.replace(/\D/g, '');
+            e.target.value = v.slice(0, 1);
+            if (v && idx < inputs.length - 1) inputs[idx + 1].focus();
+            checkComplete();
+        });
+        input.addEventListener('keydown', e => {
+            if (e.key === 'Backspace' && !e.target.value && idx > 0) {
+                inputs[idx - 1].focus();
+                inputs[idx - 1].value = '';
+                checkComplete();
+            }
+        });
+        input.addEventListener('paste', e => {
+            e.preventDefault();
+            const paste = (e.clipboardData || window.clipboardData).getData('text').replace(/\D/g, '').slice(0, 6);
+            paste.split('').forEach((ch, i) => { if (inputs[i]) inputs[i].value = ch; });
+            if (paste.length > 0) inputs[Math.min(paste.length, inputs.length) - 1].focus();
+            checkComplete();
+        });
+    });
+
+    const errEl = document.getElementById('errorMsg');
+    if (errEl && errEl.textContent.trim()) errEl.classList.add('show');
+
+    let cooldown = 0;
+    function startCooldown(sec) {
+        cooldown = sec;
+        const btn = document.getElementById('resendBtn');
+        const txt = document.getElementById('cooldownText');
+        btn.style.display = 'none';
+        txt.style.display = 'inline';
+        const tick = () => {
+            if (cooldown <= 0) {
+                btn.style.display = 'inline';
+                txt.style.display = 'none';
+                btn.disabled = false;
+                return;
+            }
+            txt.textContent = `Resend in ${cooldown}s`;
+            cooldown--;
+            setTimeout(tick, 1000);
+        };
+        tick();
+    }
+
+    function resendCode() {
+        const btn = document.getElementById('resendBtn');
+        btn.disabled = true;
+        fetch('/resend-code', { method: 'POST', headers: {'Content-Type': 'application/json'} })
+            .then(r => r.json())
+            .then(data => {
+                if (data.success) {
+                    const suc = document.getElementById('successMsg');
+                    suc.textContent = 'Verification code resent!';
+                    suc.classList.add('show');
+                    setTimeout(() => suc.classList.remove('show'), 4000);
+                    startCooldown(60);
+                } else {
+                    const err = document.getElementById('errorMsg');
+                    err.textContent = data.error || 'Failed to resend';
+                    err.classList.add('show');
+                    setTimeout(() => err.classList.remove('show'), 5000);
+                    if (data.error && data.error.includes('wait')) startCooldown(60);
+                    else btn.disabled = false;
+                }
+            })
+            .catch(() => { btn.disabled = false; });
+    }
+    </script>
+</body>
+</html>

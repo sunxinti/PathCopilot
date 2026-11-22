@@ -1,0 +1,35 @@
+# PathCopilot - 病理切片智能分析系统依赖包
+
+# Web框架
+Flask==3.0.0
+Flask-CORS==4.0.0
+Flask-SocketIO==5.3.6
+# eventlet==0.33.3  # 移除eventlet，使用threading模式
+
+# 图像处理和WSI支持
+OpenSlide-Python==1.3.1
+Pillow==10.1.0
+numpy==1.24.3
+scipy==1.11.4
+scikit-image==0.22.0
+
+# HTTP请求
+requests==2.31.0
+
+# 系统工具
+pathlib2==2.3.7
+
+# Word文档生成
+python-docx==1.1.0
+
+# 开发和调试工具（可选）
+python-dotenv==1.0.0
+
+# PathCopilot Agent Runtime MCP（官方 Python SDK）
+mcp==1.28.1
+
+# 注意：
+# 1. OpenSlide-Python 需要系统级的 OpenSlide 库支持
+# 2. Windows用户需要下载 OpenSlide Windows binaries
+# 3. Linux用户可以通过包管理器安装：sudo apt-get install openslide-tools
+# 4. macOS用户可以通过 Homebrew 安装：brew install openslide

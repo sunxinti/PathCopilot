@@ -1,0 +1,2990 @@
+@import url("./pathchat-apple-refinement.css?v=20260820-tree-warm-r1");
+
+/*
+ * PathCopilot V2 — pathology workbench theme
+ * Visual language inspired by modern scientific desktop workbenches.
+ * The legacy stylesheet remains the functional base; this file only skins it.
+ */
+
+@font-face {
+    font-family: "PathCopilot Sans";
+    src: url("./fonts/NotoSansSC-VF.ttf") format("truetype");
+    font-style: normal;
+    font-weight: 100 900;
+    font-display: swap;
+}
+
+@font-face {
+    font-family: "PathCopilot Serif";
+    src: url("./fonts/NotoSerifSC-VF.ttf") format("truetype");
+    font-style: normal;
+    font-weight: 200 900;
+    font-display: swap;
+}
+
+:root {
+    --science-font-sans: "PathCopilot Sans", "Microsoft YaHei UI", "Microsoft YaHei", "Segoe UI", sans-serif;
+    --science-font-serif: "PathCopilot Serif", "Noto Serif SC", "Source Han Serif SC", "Songti SC", serif;
+    --science-app-bg: #eee8dc;
+    --science-shell: #faf9f5;
+    --science-sidebar: #f3f0e8;
+    --science-surface: #fffdf8;
+    --science-surface-muted: #f2eee5;
+    --science-surface-deep: #eae4d9;
+    --science-hover: #eee8dc;
+    --science-border: #ded8cc;
+    --science-border-strong: #cfc6b6;
+    --science-text: #282621;
+    --science-text-secondary: #625e56;
+    --science-text-muted: #938d84;
+    --science-accent: #d97757;
+    --science-accent-hover: #c96647;
+    --science-accent-soft: #f6e8e1;
+    --science-blue: #3679bc;
+    --science-success: #4a9568;
+    --science-warning: #b7792f;
+    --science-danger: #bd574e;
+    --science-radius-sm: 6px;
+    --science-radius-md: 9px;
+    --science-radius-lg: 13px;
+    --science-radius-shell: 17px;
+    --science-shadow-shell: 0 18px 50px rgba(75, 53, 39, 0.13);
+    --science-shadow-popover: 0 14px 34px rgba(42, 38, 32, 0.16);
+
+    --header-height: 56px;
+    --left-panel-width: 276px;
+    --right-panel-width: 430px;
+
+    /* Bridge the original visual variables to the new theme. */
+    --primary-color: var(--science-accent);
+    --primary-light: #e09377;
+    --primary-dark: var(--science-accent-hover);
+    --secondary-color: var(--science-success);
+    --accent-color: var(--science-warning);
+    --danger-color: var(--science-danger);
+    --gray-50: var(--science-surface);
+    --gray-100: var(--science-surface-muted);
+    --gray-200: #e8e4dd;
+    --gray-300: var(--science-border);
+    --gray-400: #aca69d;
+    --gray-500: #858078;
+    --gray-600: var(--science-text-secondary);
+    --gray-700: #4c4943;
+    --gray-800: #37342f;
+    --gray-900: var(--science-text);
+}
+
+html,
+body {
+    width: 100%;
+    height: 100%;
+    overflow: hidden;
+}
+
+body {
+    background:
+        radial-gradient(circle at 12% 8%, rgba(255, 255, 255, 0.48), transparent 32%),
+        var(--science-app-bg);
+    color: var(--science-text);
+    font-family: var(--science-font-sans);
+    font-optical-sizing: auto;
+    padding: 8px;
+}
+
+button,
+textarea,
+input,
+select {
+    font: inherit;
+}
+
+.pathchat-container {
+    height: calc(100vh - 16px);
+    min-height: 0;
+    gap: 8px;
+    padding: 0;
+    overflow: hidden;
+    background: transparent;
+}
+
+/* App chrome */
+.header {
+    flex: 0 0 var(--header-height);
+    height: var(--header-height);
+    min-height: var(--header-height);
+    padding: 0 14px;
+    border: 1px solid rgba(110, 98, 86, 0.18);
+    border-radius: var(--science-radius-shell);
+    background: rgba(255, 254, 250, 0.92);
+    box-shadow: 0 4px 18px rgba(78, 58, 43, 0.06);
+    backdrop-filter: blur(18px) saturate(130%);
+    -webkit-backdrop-filter: blur(18px) saturate(130%);
+}
+
+.header-left,
+.header-right {
+    min-width: 0;
+}
+
+.v2-brand-lockup {
+    display: inline-flex;
+    align-items: center;
+    gap: 10px;
+    color: inherit;
+    text-decoration: none;
+}
+
+.v2-brand-mark {
+    width: 34px;
+    height: 34px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    flex: 0 0 auto;
+    color: #fff;
+    border-radius: 10px;
+    background: linear-gradient(145deg, #e18768, #c96647);
+    box-shadow: 0 6px 16px rgba(217, 119, 87, 0.22);
+}
+
+.v2-brand-mark i,
+.header-left .v2-brand-mark i {
+    color: inherit;
+    font-size: 16px;
+}
+
+.v2-brand-copy {
+    display: block;
+    line-height: 1.08;
+}
+
+.v2-brand-copy strong {
+    font-family: var(--science-font-serif);
+    font-size: 17px;
+    font-weight: 700;
+    letter-spacing: -0.25px;
+}
+
+.v2-brand-copy small {
+    display: none;
+}
+
+.header-nav-link[data-v2-i18n="demo"] {
+    display: none;
+}
+
+.header-nav {
+    gap: 2px;
+    margin-left: 18px;
+    padding-left: 14px;
+    border-left: 1px solid var(--science-border);
+}
+
+.header-nav-link {
+    position: relative;
+    padding: 7px 10px;
+    border-radius: 7px;
+    color: var(--science-text-muted);
+    font-size: 12px;
+    font-weight: 600;
+}
+
+.header-nav-link:hover,
+.header-nav-link.active {
+    color: var(--science-text);
+    background: var(--science-hover);
+}
+
+.header-nav-link.active::after {
+    content: "";
+    position: absolute;
+    right: 10px;
+    bottom: 3px;
+    left: 10px;
+    height: 2px;
+    border-radius: 2px;
+    background: var(--science-accent);
+}
+
+.v2-local-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 5px 9px;
+    border: 1px solid #d8dfd8;
+    border-radius: 999px;
+    color: #58705f;
+    background: #f2f6f1;
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 0.02em;
+}
+
+.status-indicator {
+    position: relative;
+    width: 24px;
+    height: 24px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0;
+    border-radius: 50%;
+    color: var(--science-text-secondary);
+    background: rgba(120, 120, 128, 0.055);
+}
+
+.status-indicator > span:last-child {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    padding: 0;
+    margin: -1px;
+    overflow: hidden;
+    clip: rect(0, 0, 0, 0);
+    white-space: nowrap;
+    border: 0;
+}
+
+.status-dot {
+    width: 7px;
+    height: 7px;
+    animation: none;
+    box-shadow: 0 0 0 3px rgba(74, 149, 104, 0.11);
+}
+
+.header-user-avatar {
+    width: 31px;
+    height: 31px;
+    border: 1px solid rgba(171, 82, 54, 0.18);
+    background: var(--science-accent);
+    box-shadow: none;
+}
+
+.header-user-avatar:hover {
+    border-color: #c96647;
+    box-shadow: 0 0 0 3px rgba(217, 119, 87, 0.12);
+}
+
+/* Three-column workbench */
+.main-content {
+    position: relative;
+    flex: 1 1 auto;
+    height: auto;
+    min-height: 0;
+    gap: 0;
+    overflow: hidden;
+    background: transparent;
+}
+
+.left-panel,
+.center-panel,
+.right-panel {
+    min-height: 0;
+    overflow: hidden;
+    border: 1px solid rgba(105, 95, 83, 0.19);
+    background: var(--science-surface);
+    box-shadow: 0 7px 24px rgba(69, 52, 39, 0.055);
+}
+
+.left-panel {
+    min-width: 220px;
+    max-width: 380px;
+    border-radius: var(--science-radius-shell) 0 0 var(--science-radius-shell);
+    border-right-color: var(--science-border);
+    background: var(--science-sidebar);
+    backdrop-filter: none;
+}
+
+/* Analysis results belong beside the conversation, never in the case rail. */
+.v2-inspector-workspace {
+    width: 100%;
+    height: 100%;
+    min-width: 0;
+    min-height: 0;
+    display: flex;
+    overflow: hidden;
+}
+
+.v2-subagent-pane {
+    display: none;
+    flex-direction: column;
+    flex: 0 0 310px;
+    width: 310px;
+    min-width: 300px;
+    max-width: 48%;
+    min-height: 0;
+    overflow: hidden;
+    border-right: 1px solid var(--science-border);
+    background: #f8f6f0;
+}
+
+/* 中间栏与对话栏之间的拖拽分隔条（宽度可调，双击恢复默认） */
+.v2-subagent-pane-resizer {
+    display: none;
+    flex: 0 0 6px;
+    align-self: stretch;
+    cursor: col-resize;
+    border-radius: 3px;
+    background: transparent;
+    transition: background .15s ease;
+    touch-action: none;
+}
+
+.right-panel.has-subagent-pane .v2-subagent-pane-resizer {
+    display: block;
+}
+
+.v2-subagent-pane-resizer:hover,
+.v2-subagent-pane-resizer:active {
+    background: rgba(120, 100, 80, 0.18);
+}
+
+.right-panel.has-subagent-pane {
+    width: clamp(650px, 48vw, 820px);
+    min-width: 0;
+    flex-basis: clamp(650px, 48vw, 820px);
+}
+
+.right-panel.has-subagent-pane .v2-subagent-pane {
+    display: flex;
+    flex: 1 1 48%;
+    width: auto;
+    min-width: 300px;
+    max-width: 54%;
+}
+
+.v2-conversation-pane {
+    position: relative;
+    flex: 1 1 auto;
+    min-width: 310px;
+    min-height: 0;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    background: var(--science-surface);
+}
+
+.v2-subagent-pane #analysisRoutePanel {
+    display: flex;
+    flex-direction: column;
+    flex: 1 1 auto;
+    width: 100%;
+    /* height:0 + flex-grow fills the pane. An unconstrained panel
+       grows past the column, then .v2-subagent-pane clips it and
+       Evidence / 选择理由 cannot be scrolled. */
+    height: 0;
+    min-width: 0;
+    min-height: 0;
+    overflow: hidden;
+    border: 0;
+    background: #f8f6f0;
+}
+
+.v2-subagent-pane .route-header {
+    display: none;
+}
+
+.v2-subagent-results-heading {
+    flex: 0 0 44px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 0 12px;
+    border-bottom: 1px solid var(--science-border);
+    color: var(--science-text);
+    background: rgba(255, 254, 250, 0.94);
+}
+
+.v2-subagent-results-heading i {
+    color: var(--science-accent);
+    font-size: 12.5px;
+}
+
+.v2-subagent-results-heading strong {
+    font-size: 13px;
+    font-weight: 650;
+    letter-spacing: 0.01em;
+}
+
+.v2-subagent-results-heading .v2-subagent-toggle {
+    margin-left: auto;
+    grid-column: auto;
+    grid-row: auto;
+    align-self: center;
+    justify-self: auto;
+}
+
+.v2-subagent-pane .route-steps-container {
+    flex: 1 1 auto;
+    min-height: 0;
+    overflow-x: hidden;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    -webkit-overflow-scrolling: touch;
+    padding: 9px;
+    background: #f8f6f0;
+}
+
+/* One continuous execution tree: the thumbnail interpretation is the root,
+   and each first-wave ROI Subagent is a collapsible sibling below it. */
+.v2-subagent-pane .route-steps-list {
+    position: relative;
+    gap: 0;
+    padding-left: 18px;
+}
+
+.v2-subagent-pane .route-steps-list::before {
+    content: '';
+    position: absolute;
+    top: 13px;
+    bottom: 13px;
+    left: 6px;
+    width: 1px;
+    background: #ddd8cf;
+}
+
+.v2-subagent-pane .route-steps-list > .v2-root-agent-node,
+.v2-subagent-pane .route-steps-list > .route-tree-node,
+.v2-subagent-pane .route-steps-list > .route-step-card {
+    position: relative;
+    z-index: 0;
+}
+
+.v2-subagent-pane .route-steps-list > .v2-root-agent-node::before,
+.v2-subagent-pane .route-steps-list > .route-tree-node::before,
+.v2-subagent-pane .route-steps-list > .route-step-card::before {
+    content: '';
+    position: absolute;
+    top: 12px;
+    left: -15px;
+    z-index: 2;
+    width: 7px;
+    height: 7px;
+    border-radius: 50%;
+    background: #d97757;
+    box-shadow: 0 0 0 3px #f8f6f0;
+}
+
+.v2-subagent-pane .route-steps-list > .v2-root-agent-node.is-completed::before {
+    background: #3fa36c;
+}
+
+.v2-subagent-pane .route-steps-list > .v2-root-agent-node.is-running::before {
+    animation: v2-agent-pulse 1.5s ease-in-out infinite;
+}
+
+.v2-subagent-pane .route-step-card {
+    background: #fffefa;
+    box-shadow: 0 1px 2px rgba(48, 42, 35, 0.035);
+}
+
+.v2-subagent-pane .route-empty-state.v2-subagent-empty {
+    min-height: 180px;
+    padding: 28px 18px;
+    color: var(--science-text-muted);
+}
+
+.v2-subagent-pane .route-empty-state.v2-subagent-empty i {
+    color: #c9c3b9;
+    font-size: 20px;
+}
+
+.v2-subagent-pane .route-empty-state.v2-subagent-empty p {
+    max-width: 190px;
+    margin: 10px auto 0;
+    font-size: 12px;
+    line-height: 1.6;
+    text-align: center;
+}
+
+/* The conversation remains a clean doctor/Agent exchange. */
+#chatMessages .welcome-message[hidden] {
+    display: none !important;
+}
+
+/* Execution evidence now lives beside the conversation in the Subagent pane.
+   It deliberately has no extra "Activity" card/header. */
+.v2-subagent-stream {
+    width: 100%;
+    margin: 0 0 6px;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+.v2-root-agent-header {
+    width: 100%;
+    min-height: 32px;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 7px 9px;
+    border: 0;
+    border-radius: 8px;
+    color: var(--science-text);
+    background: #fffefa;
+    box-shadow: 0 1px 2px rgba(48, 42, 35, 0.05);
+    cursor: pointer;
+    text-align: left;
+}
+
+.v2-root-agent-header:hover {
+    background: #f4f1ea;
+}
+
+.v2-root-agent-toggle {
+    width: 14px;
+    flex: 0 0 14px;
+    color: #8f8980;
+    font-size: 8px;
+    text-align: center;
+    transition: transform 160ms ease;
+}
+
+.v2-root-agent-title {
+    min-width: 0;
+    flex: 1;
+    overflow: hidden;
+    color: #35322e;
+    font-size: 12.5px;
+    font-weight: 650;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.v2-root-agent-header .v2-agent-elapsed {
+    color: #958f86;
+    font-size: 10.5px;
+    font-variant-numeric: tabular-nums;
+}
+
+.v2-root-agent-body {
+    padding: 7px 8px 1px 9px;
+}
+
+.v2-root-agent-node.is-collapsed .v2-root-agent-body {
+    display: none;
+}
+
+.v2-root-agent-node.is-collapsed .v2-root-agent-toggle {
+    transform: rotate(-90deg);
+}
+
+.v2-subagent-stream .v2-agent-activity-list {
+    gap: 2px;
+}
+
+.v2-subagent-stream .v2-agent-activity-item {
+    padding: 0;
+}
+
+/* Claude Code-style compact workflow monitor above the conversation. */
+.patient-chat-pin {
+    position: sticky;
+    top: -8px;
+    z-index: 9;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    margin: -8px -4px 14px;
+}
+
+.patient-chat-pin .v2-subagent-board {
+    position: static;
+    top: auto;
+    z-index: auto;
+    margin: 0;
+}
+
+.patient-review-chat-wrap.is-other-slide,
+.phase-confirm-message.is-other-slide,
+.wsi-analysis-msg.is-other-slide {
+    display: none !important;
+}
+
+.patient-slide-report-nav {
+    padding: 9px 10px 10px;
+    border: 1px solid var(--science-border, #dedbd4);
+    border-radius: 12px;
+    background: rgba(255, 253, 248, 0.96);
+    box-shadow: 0 1px 2px rgba(48, 42, 35, 0.04);
+}
+
+.patient-slide-report-nav[hidden] {
+    display: none !important;
+}
+
+.patient-slide-report-nav-head {
+    display: flex;
+    align-items: baseline;
+    gap: 8px;
+    min-width: 0;
+    margin-bottom: 8px;
+    font-size: 12px;
+    line-height: 1.35;
+    color: var(--science-text, #282621);
+}
+
+.patient-slide-report-nav-head strong {
+    font-size: 12.5px;
+    font-weight: 680;
+}
+
+.patient-slide-report-nav-count {
+    margin-left: auto;
+    color: var(--science-text-secondary, #625e56);
+    font-weight: 550;
+    font-variant-numeric: tabular-nums;
+}
+
+.patient-slide-report-track {
+    display: grid;
+    grid-template-columns: repeat(10, minmax(0, 1fr));
+    gap: 4px;
+}
+
+.patient-slide-report-item {
+    appearance: none;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    aspect-ratio: 1;
+    min-width: 0;
+    padding: 0;
+    border: 0;
+    border-radius: 4px;
+    background: #d7d4cd;
+    color: #5e5a54;
+    box-shadow: inset 0 0 0 1px rgba(65, 60, 53, 0.08);
+    cursor: pointer;
+}
+
+.patient-slide-report-item .item-index {
+    font-size: 11px;
+    font-weight: 700;
+    font-variant-numeric: tabular-nums;
+    line-height: 1;
+}
+
+.patient-slide-report-item[data-state="analyzing"],
+.patient-slide-report-item[data-state="revising"] {
+    background: #d97757;
+    color: #fffdf8;
+    animation: v2-agent-pulse 1.35s ease-in-out infinite;
+}
+
+.patient-slide-report-item[data-state="review"] {
+    background: #c9a46a;
+    color: #fffdf8;
+}
+
+.patient-slide-report-item[data-state="final"] {
+    background: #4ca773;
+    color: #fffdf8;
+}
+
+.patient-slide-report-item[data-state="error"] {
+    background: #c85f5f;
+    color: #fffdf8;
+}
+
+.patient-slide-report-item[data-state="composite"] {
+    background: #8b7ec8;
+    color: #fffdf8;
+}
+
+.patient-slide-report-item.is-active {
+    box-shadow: inset 0 0 0 1px rgba(63, 52, 42, 0.22), 0 0 0 2px rgba(255, 254, 250, 0.9);
+}
+
+.patient-slide-report-flash {
+    animation: patient-slide-report-flash 1.4s ease;
+}
+
+@keyframes patient-slide-report-flash {
+    0% { box-shadow: 0 0 0 0 rgba(217, 119, 87, 0); }
+    25% { box-shadow: 0 0 0 4px rgba(217, 119, 87, 0.32); }
+    100% { box-shadow: 0 0 0 0 rgba(217, 119, 87, 0); }
+}
+
+.v2-subagent-board {
+    position: sticky;
+    top: -18px;
+    z-index: 8;
+    margin: -8px -4px 18px;
+    padding: 11px 12px 10px;
+    border: 1px solid #dedbd4;
+    border-radius: 11px;
+    background: rgba(250, 249, 246, 0.96);
+    box-shadow: 0 5px 18px rgba(48, 42, 35, 0.07);
+    backdrop-filter: blur(12px);
+}
+
+.v2-subagent-board-head {
+    display: flex;
+    align-items: baseline;
+    gap: 9px;
+    color: #383633;
+    min-width: 0;
+    font-size: 12px;
+    line-height: 1.35;
+}
+
+.v2-subagent-board-head strong {
+    margin-right: auto;
+    min-width: 0;
+    font-size: 13px;
+    font-weight: 680;
+}
+
+.v2-subagent-count {
+    color: #5e5a54;
+    font-weight: 620;
+}
+
+.v2-subagent-board-elapsed,
+.v2-subagent-board-summary {
+    color: #918b82;
+    font-variant-numeric: tabular-nums;
+}
+
+.v2-subagent-board-summary {
+    margin-top: 5px;
+    font-size: 11.5px;
+    line-height: 1.45;
+}
+
+.v2-subagent-grid {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 3px;
+    margin-top: 8px;
+}
+
+.v2-subagent-cell {
+    width: 9px;
+    height: 7px;
+    display: block;
+    border-radius: 2px;
+    background: #d7d4cd;
+    box-shadow: inset 0 0 0 1px rgba(65, 60, 53, 0.08);
+    transition: background 180ms ease, transform 180ms ease;
+}
+
+.v2-subagent-cell.is-running {
+    background: #d97757;
+    animation: v2-agent-pulse 1.35s ease-in-out infinite;
+}
+
+.v2-subagent-cell.is-primary {
+    box-shadow: inset 0 0 0 1px rgba(63, 52, 42, 0.22), 0 0 0 1px rgba(255, 254, 250, 0.9);
+}
+
+.v2-subagent-cell.is-done {
+    background: #4ca773;
+}
+
+.v2-subagent-cell.is-error {
+    background: #c85f5f;
+}
+
+.v2-subagent-cell.is-stopped {
+    background: #8f8a82;
+}
+
+.v2-subagent-cell.is-pending {
+    background: #d7d4cd;
+}
+
+.v2-subagent-cell.is-review {
+    background: #c9a46a;
+    animation: none;
+}
+
+.v2-subagent-board.is-completed {
+    border-color: #cfddd4;
+}
+
+.v2-agent-activity {
+    margin: 0 0 14px;
+    overflow: hidden;
+    border: 1px solid var(--science-border);
+    border-radius: 12px;
+    background: #fffefa;
+    box-shadow: 0 1px 2px rgba(48, 42, 35, 0.035);
+}
+
+.v2-agent-activity-header {
+    width: 100%;
+    min-height: 42px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    padding: 0 12px;
+    border: 0;
+    border-bottom: 1px solid var(--science-border-soft, #ece8df);
+    color: var(--science-text);
+    background: #fbfaf7;
+    cursor: pointer;
+}
+
+.v2-agent-activity-title,
+.v2-agent-activity-meta {
+    display: inline-flex;
+    align-items: center;
+    gap: 7px;
+}
+
+.v2-agent-activity-title i {
+    color: var(--science-accent);
+    font-size: 12px;
+}
+
+.v2-agent-activity-title strong {
+    font-size: 12.5px;
+    font-weight: 650;
+    line-height: 1.45;
+}
+
+.v2-agent-activity-meta {
+    color: var(--science-text-muted);
+    font-size: 10.5px;
+    font-variant-numeric: tabular-nums;
+}
+
+.v2-agent-activity-chevron {
+    font-size: 10px;
+    transition: transform 160ms ease;
+}
+
+.v2-agent-activity.is-collapsed .v2-agent-activity-body {
+    display: none;
+}
+
+.v2-agent-activity.is-collapsed .v2-agent-activity-chevron {
+    transform: rotate(180deg);
+}
+
+.v2-agent-activity-body {
+    padding: 11px 12px 12px;
+}
+
+.v2-agent-current {
+    display: grid;
+    grid-template-columns: 8px minmax(0, 1fr) auto;
+    align-items: center;
+    gap: 7px;
+    color: var(--science-text-secondary, #625d55);
+    font-size: 12px;
+    line-height: 1.45;
+}
+
+.v2-agent-current-dot {
+    width: 7px;
+    height: 7px;
+    border-radius: 999px;
+    background: var(--science-accent);
+    box-shadow: 0 0 0 3px rgba(217, 119, 87, 0.12);
+}
+
+.v2-agent-activity.is-running .v2-agent-current-dot {
+    animation: v2-agent-pulse 1.5s ease-in-out infinite;
+}
+
+.v2-agent-activity.is-completed .v2-agent-current-dot {
+    background: #3fa36c;
+    box-shadow: 0 0 0 3px rgba(63, 163, 108, 0.12);
+}
+
+.v2-agent-activity.is-stopped .v2-agent-current-dot,
+.v2-agent-activity.is-error .v2-agent-current-dot {
+    background: #9c958c;
+    box-shadow: none;
+}
+
+.v2-agent-current-text {
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.v2-agent-current-percent {
+    color: var(--science-text-muted);
+    font-size: 10.5px;
+    font-variant-numeric: tabular-nums;
+}
+
+.v2-agent-progress-track {
+    height: 3px;
+    margin: 9px 0 12px 15px;
+    overflow: hidden;
+    border-radius: 99px;
+    background: #ebe7df;
+}
+
+.v2-agent-progress-fill {
+    display: block;
+    width: 0;
+    height: 100%;
+    border-radius: inherit;
+    background: var(--science-accent);
+    transition: width 240ms ease;
+}
+
+.v2-agent-activity-list {
+    display: flex;
+    flex-direction: column;
+}
+
+.v2-agent-activity-item {
+    display: grid;
+    grid-template-columns: 11px minmax(0, 1fr);
+    gap: 7px;
+    min-width: 0;
+}
+
+.v2-agent-activity-rail {
+    position: relative;
+}
+
+.v2-agent-activity-rail::before {
+    content: '';
+    position: absolute;
+    top: 5px;
+    left: 3px;
+    z-index: 1;
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: #b8b1a7;
+}
+
+.v2-agent-activity-rail::after {
+    content: '';
+    position: absolute;
+    top: 12px;
+    bottom: -5px;
+    left: 5.5px;
+    width: 1px;
+    background: #e3ded5;
+}
+
+.v2-agent-activity-item:last-child .v2-agent-activity-rail::after {
+    display: none;
+}
+
+.v2-agent-activity-item.is-running .v2-agent-activity-rail::before {
+    background: var(--science-accent);
+}
+
+.v2-agent-activity-item.is-done .v2-agent-activity-rail::before {
+    background: #3fa36c;
+}
+
+.v2-agent-activity-item.is-thinking .v2-agent-activity-rail::before {
+    background: #8b79b7;
+}
+
+.v2-agent-activity-item.is-error .v2-agent-activity-rail::before {
+    background: #c95f5f;
+}
+
+.v2-agent-activity-content {
+    min-width: 0;
+    padding: 0 0 12px;
+}
+
+.v2-agent-activity-content strong {
+    display: block;
+    color: var(--science-text);
+    font-size: 12.5px;
+    font-weight: 600;
+    line-height: 1.45;
+}
+
+.v2-agent-activity-content p {
+    display: -webkit-box;
+    overflow: hidden;
+    margin: 4px 0 0;
+    color: var(--science-text-muted);
+    font-size: 13px;
+    line-height: 1.55;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 5;
+}
+
+.v2-agent-activity-meta {
+    margin: 4px 0 0;
+    color: var(--science-text-muted);
+    font-size: 11px;
+    font-variant-numeric: tabular-nums;
+    letter-spacing: 0.01em;
+}
+
+.v2-agent-activity-item[data-roi-id] {
+    cursor: pointer;
+    border-radius: 8px;
+}
+
+.v2-agent-activity-item[data-roi-id]:hover .v2-agent-activity-content {
+    background: rgba(255, 255, 255, 0.55);
+}
+
+.v2-agent-activity-item.is-focused-slide {
+    background: color-mix(in srgb, #f5f3ff 70%, transparent);
+}
+
+.v2-agent-activity-item[hidden] {
+    display: none !important;
+}
+
+.v2-agent-activity-item.roi-selected-glow,
+.v2-agent-activity-item.active-viewing,
+.v2-subagent-stream .v2-agent-activity-item.roi-selected-glow,
+.v2-subagent-stream .v2-agent-activity-item.active-viewing {
+    transform: none;
+    border: 1px solid #e2c56a !important;
+    border-left: 3px solid #d0b04a !important;
+    background: rgba(255, 232, 160, 0.32) !important;
+    box-shadow: none !important;
+    animation: none;
+}
+
+.v2-subagent-stream .v2-agent-activity-item.roi-selected-glow .v2-agent-activity-content p,
+.v2-subagent-stream .v2-agent-activity-item.active-viewing .v2-agent-activity-content p,
+.v2-agent-activity-item.is-pinned .v2-agent-activity-content p {
+    -webkit-line-clamp: unset;
+    display: block;
+    overflow: visible;
+}
+
+.v2-agent-activity-item.is-thinking .v2-agent-activity-content {
+    margin-bottom: 9px;
+    padding: 8px 9px;
+    border-radius: 9px;
+    background: #f5f1fa;
+}
+
+.v2-agent-activity-thumbnail {
+    width: 100%;
+    max-height: 170px;
+    display: block;
+    margin-top: 8px;
+    object-fit: contain;
+    border: 1px solid var(--science-border);
+    border-radius: 9px;
+    background: #f2f0eb;
+}
+
+@keyframes v2-agent-pulse {
+    0%, 100% { opacity: 1; transform: scale(1); }
+    50% { opacity: 0.55; transform: scale(0.78); }
+}
+
+.v2-subagent-toggle {
+    grid-column: 2;
+    grid-row: 1;
+    align-self: center;
+    justify-self: end;
+    width: 28px;
+    height: 28px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0;
+    border: 1px solid var(--science-border);
+    border-radius: 8px;
+    color: var(--science-text-muted);
+    background: #fffefa;
+    cursor: pointer;
+    transition: border-color 140ms ease, color 140ms ease, background 140ms ease;
+}
+
+.v2-subagent-toggle[hidden] {
+    display: none;
+}
+
+.v2-subagent-toggle:hover,
+.v2-subagent-toggle.is-active {
+    border-color: #e3b5a4;
+    color: var(--science-accent);
+    background: var(--science-accent-soft);
+}
+
+.center-panel {
+    flex: 1 1 auto;
+    width: auto;
+    min-width: 430px;
+    border-right: 0;
+    border-left: 1px solid var(--science-border);
+    border-radius: var(--science-radius-shell) 0 0 var(--science-radius-shell);
+    background: var(--science-shell);
+}
+
+/* Case files behave like a docked Codex rail: closed = no layout slot,
+   open = reserve its width so the slide studio shrinks instead of being covered. */
+#v2WorkbenchShell .left-panel {
+    position: relative;
+    inset: auto;
+    z-index: 80;
+    width: var(--left-panel-width);
+    min-width: 0;
+    max-width: 0;
+    flex: 0 0 0;
+    border-width: 0;
+    border-radius: var(--science-radius-shell);
+    box-shadow: none;
+    opacity: 0;
+    transform: translateX(-24px);
+    pointer-events: none;
+    visibility: hidden;
+    transition:
+        flex-basis 180ms ease,
+        min-width 180ms ease,
+        max-width 180ms ease,
+        opacity 140ms ease,
+        transform 180ms ease,
+        visibility 0s linear 180ms;
+}
+
+#v2WorkbenchShell.v2-workbench-sidebar-open .left-panel {
+    width: var(--left-panel-width);
+    min-width: var(--left-panel-width);
+    max-width: var(--left-panel-width);
+    flex-basis: var(--left-panel-width);
+    border-width: 1px;
+    box-shadow: 8px 0 24px rgba(58, 48, 39, 0.08);
+    opacity: 1;
+    transform: translateX(0);
+    pointer-events: auto;
+    visibility: visible;
+    transition:
+        flex-basis 180ms ease,
+        min-width 180ms ease,
+        max-width 180ms ease,
+        opacity 140ms ease,
+        transform 180ms ease,
+        visibility 0s;
+}
+
+#v2WorkbenchShell #leftResizer {
+    display: none;
+}
+
+#v2WorkbenchShell .center-panel {
+    min-width: 0;
+}
+
+#v2WorkbenchShell.v2-workbench-sidebar-open .v2-back-home-button {
+    color: var(--science-accent);
+    border-color: #d9a18d;
+    background: var(--science-accent-soft);
+}
+
+.right-panel {
+    width: var(--right-panel-width);
+    min-width: 340px;
+    max-width: none;
+    flex: 0 0 var(--right-panel-width);
+    border-radius: 0 var(--science-radius-shell) var(--science-radius-shell) 0;
+    border-left-color: var(--science-border);
+    background: var(--science-surface);
+    backdrop-filter: none;
+}
+
+.panel-resizer {
+    width: 5px;
+    margin: 0 -2px;
+    background: transparent;
+    z-index: 20;
+}
+
+.panel-resizer::before {
+    width: 1px;
+    height: 100%;
+    border-radius: 0;
+    background: var(--science-border);
+    opacity: 1;
+}
+
+.panel-resizer:hover,
+.panel-resizer.dragging {
+    background: rgba(217, 119, 87, 0.07);
+}
+
+.panel-resizer:hover::before,
+.panel-resizer.dragging::before {
+    width: 2px;
+    height: 100%;
+    background: var(--science-accent);
+}
+
+.panel-header {
+    min-height: 58px;
+    padding: 10px 13px;
+    border-bottom: 1px solid var(--science-border);
+    background: rgba(255, 254, 250, 0.84);
+}
+
+.v2-panel-title {
+    display: grid;
+    min-width: 0;
+    gap: 2px;
+}
+
+.v2-panel-title.compact {
+    gap: 1px;
+}
+
+.v2-panel-kicker {
+    overflow: hidden;
+    color: var(--science-text-muted);
+    font-size: 9px;
+    font-weight: 750;
+    letter-spacing: 0.09em;
+    line-height: 1.2;
+    text-overflow: ellipsis;
+    text-transform: uppercase;
+    white-space: nowrap;
+}
+
+.panel-header .v2-panel-title h3,
+.v2-panel-title h3 {
+    display: flex;
+    align-items: center;
+    gap: 7px;
+    max-width: 100%;
+    overflow: hidden;
+    color: var(--science-text);
+    font-size: 13px;
+    font-weight: 650;
+    letter-spacing: -0.01em;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.v2-panel-title h3 i,
+.panel-header .v2-panel-title h3 i {
+    color: var(--science-accent);
+    font-size: 12px;
+}
+
+/* Left case rail */
+.v2-sidebar-actions {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 7px;
+    padding: 11px 11px 0;
+    background: var(--science-sidebar);
+}
+
+.v2-sidebar-action {
+    min-width: 0;
+    height: 34px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 7px;
+    border: 1px solid var(--science-border);
+    border-radius: var(--science-radius-md);
+    color: var(--science-text-secondary);
+    background: rgba(255, 254, 250, 0.78);
+    cursor: pointer;
+    font-size: 11px;
+    font-weight: 650;
+    transition: background 140ms ease, border-color 140ms ease, color 140ms ease;
+}
+
+.v2-sidebar-action:hover {
+    border-color: var(--science-border-strong);
+    color: var(--science-text);
+    background: #fffefa;
+}
+
+.v2-sidebar-action.primary {
+    border-color: var(--science-accent);
+    color: #fff;
+    background: var(--science-accent);
+}
+
+.v2-sidebar-action.primary:hover {
+    border-color: var(--science-accent-hover);
+    color: #fff;
+    background: var(--science-accent-hover);
+}
+
+#fileManagerPanel > .panel-header,
+#patientLevelPanel > .patient-level-header {
+    min-height: 52px;
+    padding-top: 13px;
+    padding-bottom: 8px;
+    border-bottom: 0;
+    background: transparent;
+}
+
+.upload-section {
+    padding: 7px 11px 12px;
+    border-bottom: 1px solid var(--science-border);
+}
+
+.upload-area {
+    min-height: 82px;
+    display: grid;
+    grid-template-columns: 34px 1fr;
+    grid-template-rows: auto auto;
+    align-items: center;
+    column-gap: 10px;
+    padding: 13px;
+    border: 1px dashed var(--science-border-strong);
+    border-radius: var(--science-radius-lg);
+    background: rgba(255, 254, 250, 0.72);
+}
+
+.upload-area:hover,
+.upload-area.dragover {
+    border-color: var(--science-accent);
+    background: var(--science-accent-soft);
+    transform: none;
+}
+
+.upload-area > i {
+    grid-row: 1 / span 2;
+    width: 34px;
+    height: 34px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    margin: 0;
+    border-radius: 10px;
+    color: var(--science-accent);
+    background: var(--science-accent-soft);
+    font-size: 15px;
+}
+
+.upload-area p {
+    margin: 0;
+    text-align: left;
+}
+
+.upload-area > p:first-of-type {
+    align-self: end;
+    color: var(--science-text);
+    font-size: 11px;
+    font-weight: 650;
+}
+
+.upload-area .upload-hint {
+    align-self: start;
+    color: var(--science-text-muted);
+    font-size: 10px;
+}
+
+.upload-area .format-hint {
+    display: none;
+}
+
+.files-section {
+    min-height: 0;
+    background: transparent;
+}
+
+.files-section .section-header {
+    padding: 12px 13px 7px;
+    border: 0;
+}
+
+.section-header h4 {
+    color: var(--science-text-muted);
+    font-size: 9px;
+    font-weight: 750;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+}
+
+.refresh-btn {
+    width: 25px;
+    height: 25px;
+    border-radius: 7px;
+    color: var(--science-text-muted);
+}
+
+.refresh-btn:hover {
+    color: var(--science-accent);
+    background: var(--science-accent-soft);
+}
+
+.files-list {
+    padding: 0 10px 12px;
+}
+
+.file-item {
+    margin-bottom: 7px;
+    padding: 10px;
+    border: 1px solid transparent;
+    border-radius: 11px;
+    background: transparent;
+    box-shadow: none;
+    transition: background 140ms ease, border-color 140ms ease;
+}
+
+.file-item:hover {
+    border-color: var(--science-border);
+    background: rgba(255, 254, 250, 0.84);
+    box-shadow: none;
+    transform: none;
+}
+
+.file-item.active,
+.file-item.selected {
+    border-color: #d9a18d;
+    background: var(--science-accent-soft);
+}
+
+.file-thumbnail {
+    width: 42px;
+    height: 42px;
+    border: 1px solid var(--science-border);
+    border-radius: 8px;
+    background: #fff;
+}
+
+.file-name {
+    color: var(--science-text);
+    font-size: 11px;
+    line-height: 1.35;
+}
+
+.file-meta {
+    gap: 7px;
+    color: var(--science-text-muted);
+    font-size: 9px;
+}
+
+/* Central slide canvas */
+.center-panel > .panel-header {
+    min-height: 58px;
+    gap: 12px;
+    padding-right: 11px;
+}
+
+.viewer-controls {
+    align-items: center;
+    gap: 5px;
+    flex-wrap: nowrap;
+}
+
+.viewer-controls .control-btn,
+.right-panel .panel-controls .control-btn {
+    width: 31px;
+    height: 31px;
+    min-width: 31px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0;
+    border: 1px solid var(--science-border);
+    border-radius: 8px;
+    color: var(--science-text-secondary);
+    background: #fffefa;
+    box-shadow: 0 1px 2px rgba(48, 42, 35, 0.03);
+}
+
+.viewer-controls .control-btn:hover,
+.right-panel .panel-controls .control-btn:hover {
+    border-color: var(--science-border-strong);
+    color: var(--science-text);
+    background: var(--science-hover);
+}
+
+.viewer-controls .agent-controls {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+}
+
+.viewer-controls #btnAgentRun {
+    border-color: #efd2c8;
+    color: #b65338;
+    background: #faeee9;
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.72);
+}
+
+.viewer-controls #btnAgentRun:hover {
+    border-color: #e6c0b3;
+    color: #9f452f;
+    background: #f6e2da;
+}
+
+.viewer-controls #btnAgentRun.is-stop-action {
+    border-color: #efc3bf;
+    color: #b7443d;
+    background: #faecea;
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.78);
+}
+
+.viewer-controls #btnAgentRun.is-stop-action:hover {
+    border-color: #e5aaa4;
+    color: #9f332d;
+    background: #f7dedb;
+    transform: translateY(-1px);
+    box-shadow: 0 3px 9px rgba(183, 68, 61, 0.12);
+}
+
+.viewer-controls #btnAgentRun.is-stopping,
+.viewer-controls #btnAgentRun.is-stopping:hover {
+    border-color: #e5d5d1;
+    color: #a47f78;
+    background: #f4eeec;
+    transform: none;
+    box-shadow: none;
+}
+
+.viewer-controls #btnSaveState {
+    border-color: #cde6d9;
+    color: #2d815e;
+    background: #edf7f2;
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.76);
+}
+
+.viewer-controls #btnSaveState:hover {
+    border-color: #b8d9c9;
+    color: #236d4e;
+    background: #e2f1e9;
+}
+
+.viewer-controls #btnLoadState {
+    border-color: #d6d7ec;
+    color: #5d64a2;
+    background: #f1f1f9;
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.76);
+}
+
+.viewer-controls #btnLoadState:hover {
+    border-color: #c5c8e4;
+    color: #4b528e;
+    background: #e8e9f5;
+}
+
+.viewer-controls #exportScreenshotBtn {
+    border: 1px solid #c9e3de;
+    color: #277d70;
+    background: #edf7f5;
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.76);
+}
+
+.viewer-controls #exportScreenshotBtn:hover {
+    border-color: #b5d7d0;
+    color: #1f6b60;
+    background: #e2f1ee;
+    transform: translateY(-1px);
+    box-shadow: 0 3px 9px rgba(39, 125, 112, 0.1);
+}
+
+.viewer-controls #btnAgentRun:active,
+.viewer-controls #btnSaveState:active,
+.viewer-controls #btnLoadState:active,
+.viewer-controls #exportScreenshotBtn:active {
+    transform: scale(0.96);
+    box-shadow: none;
+}
+
+.viewer-controls #btnAgentRun:disabled {
+    border-color: #e4e3df;
+    color: #aaa8a1;
+    background: #f3f2ef;
+    cursor: not-allowed;
+    opacity: 0.72;
+    transform: none;
+}
+
+.v2-control-separator {
+    width: 1px;
+    height: 22px;
+    margin: 0 2px;
+    background: var(--science-border);
+}
+
+.viewer-container {
+    margin: 8px;
+    border: 1px solid var(--science-border);
+    border-radius: 12px;
+    background: #e9e8e8;
+    box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.36);
+}
+
+.wsi-viewer {
+    overflow: hidden;
+    border-radius: 11px;
+    background:
+        linear-gradient(rgba(255,255,255,0.2) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(255,255,255,0.2) 1px, transparent 1px),
+        #e9e8ea;
+    background-size: 24px 24px;
+}
+
+.viewer-empty {
+    width: min(420px, calc(100% - 44px));
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    color: var(--science-text-secondary);
+}
+
+.viewer-empty > i {
+    display: none;
+}
+
+.v2-empty-icon {
+    width: 58px;
+    height: 58px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    margin-bottom: 14px;
+    border: 1px solid rgba(217, 119, 87, 0.18);
+    border-radius: 18px;
+    color: var(--science-accent);
+    background: rgba(255, 254, 250, 0.72);
+    box-shadow: 0 9px 28px rgba(90, 58, 43, 0.08);
+}
+
+.v2-empty-icon i,
+.viewer-empty .v2-empty-icon i {
+    display: inline;
+    margin: 0;
+    color: inherit;
+    font-size: 25px;
+    opacity: 0.72;
+}
+
+.v2-empty-kicker {
+    color: var(--science-text-muted);
+    font-size: 9px;
+    font-weight: 750;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+}
+
+.viewer-empty h2 {
+    margin: 5px 0 4px;
+    color: var(--science-text);
+    font-family: var(--science-font-serif);
+    font-size: 20px;
+    font-weight: 600;
+    letter-spacing: -0.02em;
+}
+
+.viewer-empty p {
+    color: var(--science-text-muted);
+    font-size: 11px;
+}
+
+.demo-load-btn {
+    margin-top: 15px;
+    padding: 8px 13px;
+    border-color: var(--science-border);
+    border-radius: 9px;
+    color: var(--science-text-secondary);
+    background: rgba(255, 254, 250, 0.82);
+    font-size: 10px;
+    font-weight: 650;
+}
+
+.demo-load-btn:hover {
+    border-color: #d9a18d;
+    color: var(--science-accent);
+    background: var(--science-accent-soft);
+}
+
+/* Right inspector */
+.v2-inspector-header {
+    display: none !important;
+    min-height: 0;
+    grid-template-columns: minmax(0, 1fr) auto;
+    grid-template-rows: 34px 32px;
+    gap: 2px 8px;
+    padding: 8px 9px 0;
+}
+
+.v2-conversation-pane > .v2-subagent-toggle {
+    position: absolute;
+    z-index: 12;
+    top: 10px;
+    right: 10px;
+    grid-column: auto;
+    grid-row: auto;
+}
+
+.v2-inspector-title {
+    min-width: 0;
+    display: grid;
+    align-self: center;
+    gap: 1px;
+}
+
+.v2-inspector-title strong {
+    overflow: hidden;
+    color: var(--science-text);
+    font-size: 12px;
+    font-weight: 650;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.v2-inspector-header .panel-controls {
+    align-self: center;
+}
+
+.v2-inspector-header .panel-controls .control-btn {
+    width: 27px;
+    height: 27px;
+    min-width: 27px;
+    border-color: transparent;
+    color: var(--science-text-muted);
+    background: transparent;
+}
+
+#clearChatBtn {
+    display: none !important;
+}
+
+.v2-inspector-header .panel-tabs {
+    grid-column: 1 / -1;
+    min-width: 0;
+    display: flex;
+    align-items: end;
+    gap: 0;
+    overflow-x: auto;
+    scrollbar-width: none;
+}
+
+.v2-inspector-header .panel-tabs::-webkit-scrollbar {
+    display: none;
+}
+
+.v2-inspector-header .tab-btn {
+    position: relative;
+    flex: 0 0 auto;
+    height: 32px;
+    padding: 7px 8px 9px;
+    border: 0;
+    color: var(--science-text-muted);
+    background: transparent;
+    font-size: 9px;
+    font-weight: 650;
+    letter-spacing: 0.01em;
+    white-space: nowrap;
+}
+
+.v2-inspector-header .tab-btn:hover {
+    color: var(--science-text-secondary);
+    background: transparent;
+}
+
+.v2-inspector-header .tab-btn.active {
+    color: var(--science-text);
+    border-bottom-color: transparent;
+    background: transparent;
+}
+
+.v2-inspector-header .tab-btn.active::after {
+    content: "";
+    position: absolute;
+    right: 8px;
+    bottom: 0;
+    left: 8px;
+    height: 2px;
+    border-radius: 2px 2px 0 0;
+    background: var(--science-accent);
+}
+
+.right-panel .tab-content {
+    min-height: 0;
+    background: var(--science-surface);
+}
+
+.right-panel .chat-messages {
+    padding: 18px 16px 24px;
+    color: #292825;
+    font-family: var(--science-font-sans);
+    font-size: 13px;
+    font-weight: 400;
+    -webkit-font-smoothing: antialiased;
+}
+
+.right-panel .chat-messages.is-empty {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.right-panel .chat-messages.is-empty::before {
+    content: attr(data-empty-hint);
+    max-width: 220px;
+    color: #aaa7a0;
+    font-size: 12px;
+    line-height: 1.65;
+    text-align: center;
+}
+
+.right-panel .message {
+    gap: 0;
+    margin-bottom: 19px;
+}
+
+.right-panel .message-text {
+    margin-bottom: 5px;
+    padding: 4px 2px;
+    border: 0;
+    border-radius: 0;
+    color: #343330;
+    background: transparent;
+    box-shadow: none;
+    font-family: inherit;
+    font-size: 13px;
+    font-weight: 400;
+    line-height: 1.72;
+    letter-spacing: 0;
+}
+
+.right-panel .assistant-message .message-content {
+    width: 100%;
+    max-width: 100%;
+}
+
+.right-panel .assistant-message .message-text strong {
+    color: #262522;
+    font-weight: 600;
+}
+
+.right-panel .assistant-message .message-text li {
+    margin-top: 5px;
+    margin-bottom: 5px;
+}
+
+.right-panel .user-message .message-content {
+    max-width: 82%;
+}
+
+.right-panel .user-message .message-text {
+    padding: 9px 13px;
+    border: 1px solid #ececea;
+    border-radius: 15px;
+    color: #302f2c;
+    background: #f1f1ef;
+    font-size: 13px;
+    line-height: 1.5;
+}
+
+.right-panel .message-time {
+    padding-left: 2px;
+    color: #9a9892;
+    font-size: 10px;
+    line-height: 1.3;
+}
+
+.right-panel .user-message .message-time {
+    padding-right: 4px;
+    text-align: right;
+}
+
+.right-panel .message.temporary .message-text {
+    color: #8f8d87;
+    animation: pathcopilot-thinking-pulse 1.65s ease-in-out infinite;
+}
+
+.right-panel .message.temporary .message-time {
+    display: none;
+}
+
+.right-panel .message.is-streaming .message-text::after {
+    content: '';
+    display: inline-block;
+    width: 1px;
+    height: 1em;
+    margin-left: 2px;
+    vertical-align: -0.12em;
+    background: currentColor;
+    opacity: 0.42;
+    animation: v2-stream-caret 0.8s steps(1, end) infinite;
+}
+
+@keyframes v2-stream-caret {
+    50% { opacity: 0; }
+}
+
+.right-panel .tool-activity-message {
+    margin-top: -5px;
+    margin-bottom: 11px;
+}
+
+.right-panel .tool-activity-message .message-content {
+    width: 100%;
+}
+
+.right-panel .tool-activity-line {
+    display: flex;
+    align-items: center;
+    min-width: 0;
+    padding: 2px 2px;
+    color: #85827c;
+    font-size: 11.5px;
+    line-height: 1.45;
+}
+
+.right-panel .tool-activity-icon {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 17px;
+    height: 17px;
+    margin-right: 6px;
+    color: #96938c;
+    font-size: 10px;
+}
+
+.right-panel .tool-activity-label {
+    flex: 0 0 auto;
+    margin-right: 6px;
+    color: #77746e;
+    font-weight: 500;
+}
+
+.right-panel .tool-activity-detail {
+    overflow: hidden;
+    color: #aaa7a0;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.right-panel .tool-activity-message.is-running .tool-activity-icon {
+    animation: pathcopilot-thinking-pulse 1.65s ease-in-out infinite;
+}
+
+.right-panel .tool-activity-message.is-done .tool-activity-icon {
+    color: #6d9c82;
+}
+
+.right-panel .tool-activity-message.is-error .tool-activity-icon,
+.right-panel .tool-activity-message.is-stopped .tool-activity-icon {
+    color: #b67a6a;
+}
+
+.right-panel .agent-status-message {
+    margin-top: -4px;
+    margin-bottom: 8px;
+}
+
+.right-panel .agent-status-message .message-content {
+    width: 100%;
+}
+
+.right-panel .agent-status-line {
+    display: flex;
+    align-items: baseline;
+    min-width: 0;
+    padding: 1px 2px;
+    color: #9a9790;
+    font-size: 10.5px;
+    line-height: 1.45;
+}
+
+.right-panel .agent-status-dot {
+    flex: 0 0 5px;
+    width: 5px;
+    height: 5px;
+    margin-right: 7px;
+    border-radius: 50%;
+    background: #74a087;
+    transform: translateY(-1px);
+}
+
+.right-panel .agent-status-name {
+    flex: 0 0 auto;
+    margin-right: 5px;
+    color: #77746e;
+    font-weight: 600;
+}
+
+.right-panel .agent-status-detail {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+/* Compact Codex-like hierarchy: results stay readable without dominating the WSI. */
+.v2-subagent-pane .route-tree-node {
+    margin-bottom: 5px;
+}
+
+/* Collaborative workstation cards repeat the activity-stream Evidence
+   in a leftover colorful style. Keep the DOM for any in-flight lookups,
+   but never show that second list in the Subagent column. */
+.v2-subagent-pane .collab-task-card {
+    display: none !important;
+}
+
+.v2-subagent-pane .route-steps-list > .route-tree-node[hidden],
+.v2-subagent-pane .route-steps-list > .route-step-card[hidden],
+.v2-subagent-pane .route-steps-list > .patient-slide-map[hidden],
+.v2-subagent-pane .patient-slide-map > .route-tree-node[hidden],
+.v2-subagent-pane .patient-slide-map > .route-step-card[hidden],
+.v2-subagent-pane .patient-slide-map > .collab-task-card[hidden],
+.v2-subagent-pane .patient-slide-map > .phase-result-card[hidden] {
+    display: none !important;
+}
+
+.v2-subagent-pane .patient-slide-map {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    min-width: 0;
+}
+
+.v2-subagent-pane .patient-slide-map[hidden],
+.v2-subagent-pane .patient-slide-map:not(.is-active-slide) {
+    display: none !important;
+}
+
+.v2-subagent-pane .patient-slide-map.is-active-slide:not([hidden]) {
+    display: flex;
+}
+
+.v2-subagent-pane .patient-slide-map-label {
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--science-text-secondary, #6b5e54);
+    padding: 4px 2px 2px;
+}
+
+.v2-subagent-pane .route-tree-header {
+    gap: 5px;
+    padding: 7px 9px;
+    border-radius: 8px;
+}
+
+.v2-subagent-pane .route-tree-title {
+    gap: 4px;
+    font-size: 12.5px;
+    font-weight: 600;
+}
+
+.v2-subagent-pane .route-tree-title .tree-icon,
+.v2-subagent-pane .route-tree-toggle {
+    font-size: 11px;
+}
+
+.v2-subagent-pane .route-tree-badge,
+.v2-subagent-pane .route-tree-count {
+    padding: 2px 6px;
+    font-size: 10.5px;
+}
+
+.v2-subagent-pane .route-tree-content {
+    margin: 5px 0 6px 20px;
+    padding: 8px 9px;
+    font-size: 13px;
+    line-height: 1.62;
+}
+
+/* Auto and Collaborative share the same evidence surface.  The generic
+   thumbnail observation historically escaped the route-tree typography and
+   rendered at 11px in a narrow 230px column.  Keep all evidence readable at
+   normal desktop zoom instead of asking users to magnify the browser. */
+.v2-subagent-pane .box-observation,
+.v2-subagent-pane .route-tree-content,
+.v2-subagent-pane .route-tree-blue-content,
+.v2-subagent-pane .route-tree-green-content {
+    font-size: 13px;
+    line-height: 1.58;
+    overflow-wrap: anywhere;
+    overflow: visible;
+}
+
+.v2-subagent-pane .v2-agent-activity,
+.v2-subagent-pane .v2-subagent-stream,
+.v2-subagent-pane .patient-slide-map {
+    overflow: visible;
+}
+
+.v2-subagent-pane .v2-agent-activity-item.roi-selected-glow,
+.v2-subagent-pane .v2-agent-activity-item.active-viewing,
+.v2-subagent-pane .route-tree-node.roi-selected-glow,
+.v2-subagent-pane .route-tree-content.roi-selected-glow {
+    position: relative;
+    z-index: 0;
+}
+
+.v2-subagent-pane .route-tree-children {
+    margin-top: 4px;
+    margin-left: 9px;
+    padding-left: 9px;
+    max-height: none;
+    overflow: visible;
+}
+
+.v2-subagent-pane .route-tree-blue-header {
+    gap: 4px;
+    padding: 6px 8px;
+}
+
+.v2-subagent-pane .route-tree-blue-title {
+    font-size: 12.5px;
+}
+
+.v2-subagent-pane .route-tree-blue-content {
+    margin: 5px 0 6px 8px;
+    padding: 7px 8px;
+    font-size: 13px;
+    line-height: 1.6;
+}
+
+.v2-subagent-pane .route-tree-green-title {
+    font-size: 12.5px;
+}
+
+.v2-subagent-pane .route-tree-green-content {
+    font-size: 13px;
+    line-height: 1.58;
+}
+
+/* Collaborative parity: both internal panes must shrink without forcing a
+   horizontal scrollbar in the conversation column. */
+.right-panel.has-subagent-pane .v2-conversation-pane,
+.right-panel.has-subagent-pane .chat-messages,
+.right-panel.has-subagent-pane .message,
+.right-panel.has-subagent-pane .message-content {
+    min-width: 0;
+    max-width: 100%;
+}
+
+.right-panel.has-subagent-pane .chat-messages,
+.right-panel.has-subagent-pane .v2-conversation-pane {
+    overflow-x: hidden;
+}
+
+.right-panel.has-subagent-pane .message-content,
+.right-panel.has-subagent-pane .phase-confirm-message,
+.right-panel.has-subagent-pane .analysis-consent-card {
+    overflow-wrap: anywhere;
+}
+
+@media (max-width: 1180px) {
+    .right-panel.has-subagent-pane {
+        width: min(62vw, 680px);
+        flex-basis: min(62vw, 680px);
+    }
+
+    .right-panel.has-subagent-pane .v2-subagent-pane {
+        min-width: 270px;
+    }
+}
+
+@keyframes pathcopilot-thinking-pulse {
+    0%,
+    100% {
+        opacity: 0.34;
+    }
+    50% {
+        opacity: 0.78;
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .right-panel .message.temporary .message-text,
+    .v2-home-chat-message.is-temporary .v2-home-chat-bubble {
+        opacity: 0.62;
+        animation: none;
+    }
+}
+
+.welcome-message {
+    justify-content: flex-start;
+    text-align: left;
+}
+
+.welcome-message .message-content {
+    max-width: 100%;
+}
+
+.welcome-message .message-text {
+    border: 0;
+    border-radius: 0;
+    background: transparent;
+}
+
+.welcome-message .message-text p:first-child {
+    color: var(--science-text);
+    font-family: var(--science-font-sans);
+    font-size: 16px;
+    font-weight: 600;
+}
+
+.welcome-message .message-text p:last-child {
+    color: var(--science-text-muted);
+    font-size: 11px;
+}
+
+.chat-input-container {
+    padding: 10px 11px 11px;
+    border-top: 1px solid var(--science-border);
+    background: #faf8f4;
+}
+
+.draft-report-dock {
+    margin: 0 0 8px;
+}
+
+.draft-report-dock .draft-report-btn.secondary {
+    background: #efe3d6;
+    color: #4a3426;
+}
+
+.draft-report-dock .draft-report-btn.primary {
+    background: #c45c3e;
+    color: #fff;
+}
+
+.input-area {
+    gap: 7px;
+    align-items: center;
+    padding: 4px 4px 4px 10px;
+    border: 1px solid var(--science-border);
+    border-radius: 12px;
+    background: #fffefa;
+    transition: border-color 140ms ease, box-shadow 140ms ease;
+}
+
+.input-area:focus-within {
+    border-color: #d39781;
+    box-shadow: 0 0 0 3px rgba(217, 119, 87, 0.1);
+}
+
+#chatInput {
+    min-height: 42px;
+    max-height: 130px;
+    padding: 8px 0;
+    border: 0;
+    border-radius: 0;
+    color: var(--science-text);
+    background: transparent;
+    font-size: 11px;
+    line-height: 1.45;
+}
+
+#chatInput:focus {
+    border: 0;
+    box-shadow: none;
+}
+
+.send-btn {
+    width: 34px;
+    height: 34px;
+    min-width: 34px;
+    padding: 0;
+    border-radius: 9px;
+    background: var(--science-accent);
+}
+
+.send-btn:hover:not(:disabled) {
+    background: var(--science-accent-hover);
+    transform: none;
+}
+
+.send-btn:disabled {
+    color: #aaa69e;
+    background: #e5e1da;
+}
+
+.quick-actions {
+    gap: 5px;
+    margin-top: 7px;
+}
+
+.quick-action-btn {
+    flex: 0 1 auto;
+    padding: 5px 8px;
+    border-color: var(--science-border);
+    border-radius: 999px;
+    color: var(--science-text-muted);
+    background: #f7f5f1;
+    font-size: 9px;
+}
+
+.quick-actions {
+    display: none !important;
+}
+
+.quick-action-btn:hover {
+    border-color: #d9a18d;
+    color: var(--science-accent);
+    background: var(--science-accent-soft);
+}
+
+.roi-selection-info,
+.screenshot-preview {
+    margin-bottom: 7px;
+    border-color: #e0b9aa;
+    border-radius: 10px;
+    background: var(--science-accent-soft);
+}
+
+/* Execution and evidence panes */
+.agent-timeline-container,
+.reasoning-tree-container {
+    background: var(--science-surface);
+}
+
+.timeline-header,
+.tree-header {
+    min-height: 48px;
+    padding: 11px 13px;
+    border-bottom: 1px solid var(--science-border);
+    background: #faf8f4;
+}
+
+.timeline-header h4,
+.tree-header h4 {
+    color: var(--science-text);
+    font-family: var(--science-font-sans);
+    font-size: 14px;
+    font-weight: 600;
+}
+
+.agent-timeline,
+.tree-visualization {
+    padding: 13px;
+}
+
+.timeline-empty,
+.tree-empty {
+    color: var(--science-text-muted);
+}
+
+.tree-legend {
+    gap: 7px;
+}
+
+.legend-item {
+    font-size: 8px;
+}
+
+/* Environment and review pages */
+.v2-inspector-page {
+    height: 100%;
+    overflow-y: auto;
+    padding: 16px 14px 24px;
+    background: #faf9f6;
+}
+
+.v2-page-heading {
+    display: flex;
+    align-items: flex-start;
+    gap: 10px;
+    margin-bottom: 16px;
+}
+
+.v2-page-icon {
+    width: 34px;
+    height: 34px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    flex: 0 0 auto;
+    border-radius: 10px;
+    color: var(--science-blue);
+    background: #e8f0f8;
+}
+
+.v2-page-icon.review {
+    color: var(--science-success);
+    background: #e8f2eb;
+}
+
+.v2-page-heading h4 {
+    margin: 1px 0 2px;
+    color: var(--science-text);
+    font-family: var(--science-font-sans);
+    font-size: 15px;
+    font-weight: 600;
+}
+
+.v2-page-heading p {
+    color: var(--science-text-muted);
+    font-size: 10px;
+    line-height: 1.45;
+}
+
+.v2-info-card,
+.v2-review-list {
+    overflow: hidden;
+    border: 1px solid var(--science-border);
+    border-radius: 12px;
+    background: var(--science-surface);
+}
+
+.v2-info-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+    min-height: 42px;
+    padding: 9px 12px;
+    color: var(--science-text-muted);
+    font-size: 10px;
+}
+
+.v2-info-row + .v2-info-row {
+    border-top: 1px solid var(--science-border);
+}
+
+.v2-info-row strong {
+    color: var(--science-text-secondary);
+    font-size: 10px;
+    font-weight: 650;
+    text-align: right;
+}
+
+.v2-secondary-button {
+    width: 100%;
+    min-height: 37px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 7px;
+    margin-top: 11px;
+    border: 1px solid var(--science-border);
+    border-radius: 10px;
+    color: var(--science-text-secondary);
+    background: var(--science-surface);
+    cursor: pointer;
+    font-size: 10px;
+    font-weight: 650;
+}
+
+.v2-secondary-button:hover {
+    border-color: #d9a18d;
+    color: var(--science-accent);
+    background: var(--science-accent-soft);
+}
+
+.v2-review-item {
+    min-height: 56px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 10px 12px;
+}
+
+.v2-review-item + .v2-review-item {
+    border-top: 1px solid var(--science-border);
+}
+
+.v2-review-item > div {
+    min-width: 0;
+    display: grid;
+    gap: 2px;
+}
+
+.v2-review-item strong {
+    color: var(--science-text-secondary);
+    font-size: 10px;
+    font-weight: 650;
+}
+
+.v2-review-item small {
+    color: var(--science-text-muted);
+    font-size: 9px;
+}
+
+.v2-review-status {
+    width: 20px;
+    height: 20px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    flex: 0 0 auto;
+    border-radius: 50%;
+    font-size: 7px;
+}
+
+.v2-review-status.pending {
+    color: #aaa59d;
+    background: #efede8;
+}
+
+.v2-review-status.running {
+    color: var(--science-warning);
+    background: #f7eedf;
+}
+
+.v2-review-status.complete {
+    color: #fff;
+    background: var(--science-success);
+}
+
+.v2-review-note {
+    display: flex;
+    align-items: flex-start;
+    gap: 8px;
+    margin-top: 11px;
+    padding: 11px;
+    border: 1px solid #ead1c7;
+    border-radius: 10px;
+    color: #9f573f;
+    background: #f8ebe5;
+    font-size: 9px;
+    line-height: 1.5;
+}
+
+/* Dialogs and floating surfaces */
+.mode-selection-overlay,
+.settings-modal-overlay {
+    background: rgba(44, 37, 32, 0.46);
+    backdrop-filter: blur(7px);
+}
+
+.mode-selection-content,
+.settings-modal,
+.copilot-confirm-content {
+    border: 1px solid rgba(114, 99, 83, 0.18);
+    border-radius: 18px;
+    background: var(--science-surface);
+    box-shadow: var(--science-shadow-popover);
+}
+
+.mode-card {
+    border-color: var(--science-border);
+    border-radius: 13px;
+    background: #faf9f6;
+}
+
+.mode-card:hover {
+    border-color: #d9a18d;
+    background: var(--science-accent-soft);
+    transform: translateY(-1px);
+}
+
+.settings-modal-header,
+.settings-modal-footer {
+    border-color: var(--science-border);
+}
+
+.settings-modal-header h2,
+.settings-section h3 {
+    color: var(--science-text);
+}
+
+.notification {
+    border-color: var(--science-border);
+    border-radius: 12px;
+    background: var(--science-surface);
+    box-shadow: var(--science-shadow-popover);
+}
+
+.notification:has(.notification-path) {
+    width: min(540px, calc(100vw - 32px));
+    max-width: 540px;
+}
+
+.notification-content {
+    align-items: flex-start;
+}
+
+.notification-text {
+    display: flex;
+    min-width: 0;
+    flex: 1;
+    flex-direction: column;
+    gap: 7px;
+}
+
+.notification-title {
+    color: var(--science-text);
+    font-size: 13px;
+    font-weight: 650;
+    letter-spacing: -0.01em;
+}
+
+.notification-summary,
+.notification-report-pending {
+    color: var(--science-muted);
+    font-size: 11px;
+    line-height: 1.45;
+}
+
+.notification-file-group {
+    display: grid;
+    min-width: 0;
+    gap: 5px;
+    padding-top: 3px;
+}
+
+.notification-file-group + .notification-file-group {
+    margin-top: 2px;
+    padding-top: 8px;
+    border-top: 1px solid color-mix(in srgb, var(--science-border) 72%, transparent);
+}
+
+.notification-file-label {
+    color: var(--science-text);
+    font-size: 10px;
+    font-weight: 650;
+}
+
+.notification-path {
+    display: block;
+    overflow: hidden;
+    padding: 7px 9px;
+    border: 1px solid var(--science-border);
+    border-radius: 8px;
+    color: var(--science-text);
+    background: color-mix(in srgb, var(--science-surface) 72%, #e9e5df);
+    font: 10px/1.45 ui-monospace, SFMono-Regular, Consolas, monospace;
+    text-overflow: ellipsis;
+    user-select: text;
+    white-space: nowrap;
+}
+
+.notification-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 7px;
+}
+
+.notification-action {
+    display: inline-flex;
+    min-height: 30px;
+    align-items: center;
+    gap: 6px;
+    padding: 5px 10px;
+    border: 1px solid var(--science-border);
+    border-radius: 8px;
+    color: var(--science-text);
+    background: var(--science-surface);
+    font-size: 11px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background-color 140ms ease, border-color 140ms ease, transform 100ms ease-out;
+}
+
+.notification-action:hover {
+    border-color: #d9a18d;
+    background: var(--science-accent-soft);
+}
+
+.notification-action:active {
+    transform: scale(0.98);
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .notification-action {
+        transition: none;
+    }
+}
+
+/* Scrollbars */
+* {
+    scrollbar-color: #c7c1b8 transparent;
+    scrollbar-width: thin;
+}
+
+*::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+}
+
+*::-webkit-scrollbar-track {
+    background: transparent;
+}
+
+*::-webkit-scrollbar-thumb {
+    border-radius: 999px;
+    background: #c7c1b8;
+}
+
+/* Compact desktop fallback */
+@media (max-width: 1320px) {
+    :root {
+        --left-panel-width: 238px;
+        --right-panel-width: 370px;
+    }
+
+    .v2-local-badge {
+        display: none;
+    }
+
+    #v2WorkbenchShell .center-panel {
+        min-width: 0;
+    }
+
+    .v2-inspector-header .tab-btn {
+        padding-right: 6px;
+        padding-left: 6px;
+        font-size: 8.5px;
+    }
+
+    .v2-inspector-header .tab-btn.active::after {
+        right: 6px;
+        left: 6px;
+    }
+}
+
+@media (max-width: 1100px) {
+    :root {
+        --left-panel-width: 220px;
+        --right-panel-width: 340px;
+    }
+
+    .header-nav-link {
+        padding-right: 7px;
+        padding-left: 7px;
+    }
+
+    #v2WorkbenchShell .center-panel {
+        min-width: 0;
+    }
+
+    .viewer-controls {
+        gap: 3px;
+    }
+
+    .viewer-controls .control-btn {
+        width: 28px;
+        height: 28px;
+        min-width: 28px;
+    }
+}
+
+@media (max-width: 1100px) {
+    body {
+        padding: 0;
+    }
+
+    .pathchat-container {
+        height: 100vh;
+        height: 100dvh;
+        gap: 0;
+    }
+
+    .header,
+    .left-panel,
+    .right-panel {
+        border-radius: 0;
+    }
+
+    .header-nav,
+    .v2-brand-copy small {
+        display: none;
+    }
+
+    /* Spatial fallback: preserve the slide as the primary work surface and
+       move the inspector below it.  Shrinking three desktop columns into a
+       phone-width row made the chat and Workflow horizontally unreachable. */
+    #v2WorkbenchShell .main-content {
+        min-width: 0;
+        flex-direction: column;
+        overflow: hidden;
+    }
+
+    #v2WorkbenchShell .center-panel {
+        width: 100%;
+        min-width: 0;
+        min-height: 42vh;
+        flex: 1 1 56%;
+        border: 0;
+        border-bottom: 1px solid var(--science-border);
+        border-radius: 0;
+    }
+
+    #v2WorkbenchShell .right-panel,
+    #v2WorkbenchShell .right-panel.has-subagent-pane {
+        width: 100%;
+        min-width: 0;
+        max-width: none;
+        min-height: 0;
+        flex: 0 1 44vh;
+        flex-basis: 44vh;
+        border: 0;
+        border-radius: 0;
+        overflow: hidden;
+    }
+
+    #v2WorkbenchShell #rightResizer {
+        display: none;
+    }
+
+    .right-panel.has-subagent-pane .v2-subagent-pane,
+    .right-panel.has-subagent-pane .v2-conversation-pane {
+        min-width: 0;
+    }
+}
+
+@media (max-width: 820px) {
+    .pathchat-container {
+        height: calc(100dvh - 1px);
+    }
+
+    .header {
+        min-width: 0;
+        /* Keep edge controls fully inside compact browser viewports.  The
+           extra trailing inset also covers desktop-shell safe areas instead
+           of letting the avatar touch (or be clipped by) the viewport edge. */
+        padding-right: max(36px, calc(14px + env(safe-area-inset-right)));
+        padding-left: 10px;
+    }
+
+    .header-left {
+        gap: 8px;
+    }
+
+    .header-right {
+        gap: 6px;
+        flex: 0 0 auto;
+    }
+
+    .header-user-menu {
+        margin-left: 2px;
+    }
+
+    .header-user-avatar {
+        width: 44px;
+        height: 44px;
+        min-width: 44px;
+    }
+
+    .v2-brand-copy,
+    .status-indicator > span:not(.status-dot) {
+        display: none;
+    }
+
+    #v2WorkbenchShell .right-panel.has-subagent-pane .v2-inspector-workspace {
+        flex-direction: column;
+    }
+
+    #v2WorkbenchShell .center-panel {
+        min-height: 0;
+        flex: 1 1 52%;
+    }
+
+    #v2WorkbenchShell .right-panel,
+    #v2WorkbenchShell .right-panel.has-subagent-pane {
+        min-height: 0;
+        flex: 1 1 48%;
+        flex-basis: 48%;
+    }
+
+    #v2WorkbenchShell .right-panel.has-subagent-pane .v2-subagent-pane {
+        width: 100%;
+        min-width: 0;
+        max-width: none;
+        min-height: 0;
+        flex: 1 1 48%;
+        border-right: 0;
+        border-bottom: 1px solid var(--science-border);
+    }
+
+    #v2WorkbenchShell .v2-subagent-results-heading {
+        /* The results toggle is a primary touch target; preserve all four
+           edges even when the host browser reserves a trailing gutter. */
+        padding-right: max(32px, calc(12px + env(safe-area-inset-right)));
+    }
+
+    #v2WorkbenchShell .right-panel.has-subagent-pane .v2-conversation-pane {
+        width: 100%;
+        min-width: 0;
+        min-height: 0;
+        flex: 1 1 52%;
+        border-top: 4px solid var(--science-surface-deep);
+        background: var(--science-surface);
+        box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.82);
+    }
+
+    .right-panel .chat-messages {
+        padding: 16px 12px 18px;
+    }
+
+    #v2WorkbenchShell .chat-input-container {
+        /* A visible bottom breathing zone prevents the composer and 44 px
+           send target from being cropped by compact host-window chrome. The
+           trailing inset keeps the circular send control fully visible too. */
+        margin-bottom: max(28px, env(safe-area-inset-bottom));
+        padding-right: max(36px, calc(11px + env(safe-area-inset-right)));
+    }
+
+    /*
+     * Mobile is a touch surface, not a scaled-down desktop toolbar. Keep the
+     * filename readable on its own row and expose every viewer action through
+     * a horizontally scrollable 44px control rail. This preserves direct,
+     * interruption-friendly access without forcing the page to overflow.
+     */
+    #v2WorkbenchShell .center-panel > .panel-header {
+        min-height: 0;
+        align-items: stretch;
+        flex-direction: column;
+        gap: 8px;
+        padding: 9px 12px 10px;
+    }
+
+    #v2WorkbenchShell .center-panel > .panel-header .v2-panel-title {
+        width: 100%;
+        min-width: 0;
+    }
+
+    #v2WorkbenchShell .center-panel > .panel-header .v2-panel-title h3 {
+        width: 100%;
+        min-width: 0;
+    }
+
+    #v2WorkbenchShell .viewer-controls {
+        width: 100%;
+        min-width: 0;
+        gap: 6px;
+        overflow-x: auto;
+        overflow-y: hidden;
+        padding: 1px 0 3px;
+        scroll-snap-type: x proximity;
+        scrollbar-width: none;
+        overscroll-behavior-inline: contain;
+        -webkit-overflow-scrolling: touch;
+    }
+
+    #v2WorkbenchShell .viewer-controls::-webkit-scrollbar {
+        display: none;
+    }
+
+    #v2WorkbenchShell .viewer-controls .control-btn,
+    #v2WorkbenchShell .viewer-controls .agent-controls .control-btn,
+    #v2WorkbenchShell .viewer-controls .load-state-dropdown .control-btn {
+        width: 44px;
+        height: 44px;
+        min-width: 44px;
+        flex: 0 0 44px;
+        scroll-snap-align: start;
+    }
+
+    #v2WorkbenchShell .viewer-controls .agent-controls,
+    #v2WorkbenchShell .viewer-controls .load-state-dropdown {
+        flex: 0 0 auto;
+    }
+
+    #v2WorkbenchSidebarToggle,
+    #v2WorkbenchShell .right-panel .panel-controls .control-btn,
+    #v2WorkbenchShell .send-btn {
+        width: 44px;
+        height: 44px;
+        min-width: 44px;
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    *,
+    *::before,
+    *::after {
+        scroll-behavior: auto !important;
+        transition-duration: 0.01ms !important;
+        animation-duration: 0.01ms !important;
+        animation-iteration-count: 1 !important;
+    }
+}

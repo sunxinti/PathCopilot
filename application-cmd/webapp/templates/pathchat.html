@@ -1,0 +1,2596 @@
+<!DOCTYPE html>
+<html lang="zh-CN" id="htmlRoot">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PathCopilot</title>
+    <!-- Language must be set before rendering -->
+    <script>window.__lang = localStorage.getItem('pc_lang') || 'zh';</script>
+    
+    <!-- 样式文件 -->
+    <link rel="stylesheet" href="{{ url_for('static', filename='pathchat.css') }}?v=20260830-anchor-edit">
+    <link rel="stylesheet" href="{{ url_for('static', filename='pathchat-v2.css') }}?v=20260830-subagent-resizer">
+    <link rel="stylesheet" href="{{ url_for('static', filename='pathchat-home.css') }}?v=20260828-home-recents">
+    
+    <!-- 字体图标（本地化） -->
+    <link href="{{ url_for('static', filename='vendor/font-awesome/css/all.min.css') }}" rel="stylesheet">
+    
+    <!-- OpenSeadragon库（本地化） -->
+    <script src="{{ url_for('static', filename='vendor/openseadragon/openseadragon.min.js') }}"></script>
+    
+    <!-- Socket.IO库（本地化） -->
+    <script src="{{ url_for('static', filename='vendor/socketio/socket.io.js') }}"></script>
+    
+    <!-- html2canvas库（本地化） -->
+    <script src="{{ url_for('static', filename='vendor/html2canvas/html2canvas.min.js') }}"></script>
+    <script src="{{ url_for('static', filename='js/roi-palette.js') }}?v=20260731-live-roi-palette"></script>
+</head>
+<body>
+    <!-- Codex-style launch surface. The WSI workbench is revealed only after a task starts. -->
+    <section class="v2-home-shell" id="v2HomeShell" aria-label="PathCopilot 启动页">
+        <aside class="v2-home-sidebar">
+            <div class="v2-home-workspace-row">
+                <div class="v2-home-brand">
+                    <span class="v2-home-brand-mark"><i class="fas fa-microscope"></i></span>
+                    <span>
+                        <strong>PathCopilot</strong>
+                        <small data-v2-i18n="pathologyWorkspace">病理工作区</small>
+                    </span>
+                </div>
+                <button type="button" class="v2-home-icon-button" id="v2HomeSidebarToggle" aria-label="收起侧栏" aria-expanded="true" title="收起侧栏">
+                    <svg class="v2-home-sidebar-toggle-icon" viewBox="0 0 18 18" aria-hidden="true">
+                        <rect x="2.25" y="2.75" width="13.5" height="12.5" rx="2.4"></rect>
+                        <path d="M7 3.15v11.7"></path>
+                    </svg>
+                </button>
+            </div>
+
+            <nav class="v2-home-primary-nav" aria-label="主要操作">
+                <button type="button" class="v2-home-nav-item active" id="v2HomeNewTask">
+                    <i class="far fa-edit"></i>
+                    <span data-v2-i18n="newAnalysis">新建分析</span>
+                    <kbd>Ctrl N</kbd>
+                </button>
+                <button type="button" class="v2-home-nav-item" id="v2HomeUpload">
+                    <i class="fas fa-cloud-upload-alt"></i>
+                    <span data-v2-i18n="uploadSlide">上传切片</span>
+                </button>
+                {% if demo_available %}
+                <button type="button" class="v2-home-nav-item" id="v2HomeDemo">
+                    <i class="fas fa-flask"></i>
+                    <span data-v2-i18n="openDemoCase">演示病例</span>
+                </button>
+                {% endif %}
+            </nav>
+
+            <div class="v2-home-divider"></div>
+
+            <section class="v2-home-threads" aria-labelledby="v2HomeRecentsHeading">
+                <div class="v2-home-section-heading">
+                    <span id="v2HomeRecentsHeading" data-v2-i18n="recentItems">最近</span>
+                    <button type="button" class="v2-home-section-action" id="v2HomeRefreshThreads" title="刷新" aria-label="刷新">
+                        <i class="fas fa-sync-alt"></i>
+                    </button>
+                </div>
+                <div class="v2-home-thread-list" id="v2HomeThreadList" aria-live="polite">
+                    <div class="v2-home-thread-empty" data-v2-i18n="loadingRecents">正在读取最近项目…</div>
+                </div>
+            </section>
+
+            <div class="v2-home-sidebar-footer">
+                <button type="button" class="v2-home-nav-item" id="v2HomeSettings" onclick="openSettingsModal()">
+                    <i class="fas fa-sliders-h"></i>
+                    <span data-v2-i18n="settings">设置</span>
+                </button>
+            </div>
+        </aside>
+
+        <main class="v2-home-main" id="v2HomeMain">
+            <div class="v2-home-stage">
+                <div class="v2-home-welcome">
+                    <div class="v2-home-welcome-mark"><i class="fas fa-microscope"></i></div>
+                    <h1 data-v2-i18n="homeQuestion">分析切片，或咨询病理问题</h1>
+                </div>
+                <div class="v2-home-chat" id="v2HomeChat" aria-live="polite" hidden></div>
+            </div>
+
+            <nav class="v2-home-turn-rail" id="v2HomeTurnRail" aria-label="对话回溯" hidden>
+                <div class="v2-home-turn-track" id="v2HomeTurnTrack"></div>
+            </nav>
+
+            <div class="v2-home-composer-wrap">
+                <form class="v2-home-composer" id="v2HomeComposer">
+                    <div class="v2-home-composer-context">
+                        <i class="fas fa-folder-open"></i>
+                        <span id="v2HomeConversationTitle" data-v2-i18n="newPathologyTask">病理对话与 WSI 分析</span>
+                    </div>
+                    <div class="v2-home-attachments" id="v2HomeAttachments" aria-live="polite" hidden></div>
+                    <textarea id="v2HomePrompt" rows="3" data-v2-i18n-placeholder="homePromptPlaceholder" placeholder="咨询病理问题，或描述需要执行的 WSI 分析任务"></textarea>
+                    <div class="v2-home-composer-toolbar">
+                        <div class="v2-home-composer-tools">
+                            <button type="button" class="v2-home-tool-button" id="v2HomeAttach" title="添加图片" aria-label="添加图片">
+                                <i class="fas fa-plus"></i>
+                            </button>
+                            <input type="file" id="v2HomeImageInput" accept="image/jpeg,image/png,image/webp,image/gif,image/bmp,.svs,.ndpi,.tiff,.tif,.vms,.vmu,.scn,.mrxs,.bif" multiple hidden>
+                        </div>
+                        <button type="submit" class="v2-home-submit" id="v2HomeSubmit" aria-label="启动分析" title="启动分析">
+                            <i class="fas fa-arrow-up"></i>
+                        </button>
+                    </div>
+                </form>
+                <p class="v2-home-privacy-note">
+                    <i class="fas fa-shield-alt" aria-hidden="true"></i>
+                    <span data-v2-i18n="webPrivacy">Only de-identified medical concepts are sent to public search services.</span>
+                </p>
+            </div>
+
+            <div class="v2-home-drop-overlay" id="v2HomeDropOverlay" aria-hidden="true">
+                <div><i class="fas fa-cloud-upload-alt"></i><strong data-v2-i18n="dropToAnalyze">松开以添加图片或数字切片</strong></div>
+            </div>
+        </main>
+    </section>
+
+    <div class="pathchat-container v2-workbench-is-hidden" id="v2WorkbenchShell" aria-hidden="true">
+        <!-- 顶部标题栏 -->
+        <header class="header">
+            <div class="header-left">
+                <button type="button" class="v2-back-home-button" id="v2WorkbenchSidebarToggle" title="打开病例栏" aria-label="打开病例栏" aria-expanded="false">
+                    <i class="fas fa-columns"></i>
+                </button>
+                <a href="/" class="v2-brand-lockup" aria-label="PathCopilot home">
+                    <span class="v2-brand-mark"><i class="fas fa-microscope"></i></span>
+                    <span class="v2-brand-copy">
+                        <strong>PathCopilot</strong>
+                    </span>
+                </a>
+                <nav class="header-nav">
+                    <a href="javascript:void(0)" class="header-nav-link active" data-v2-i18n="workspace">Workspace</a>
+                    <a href="javascript:void(0)" class="header-nav-link" onclick="openSettingsModal()" data-v2-i18n="settings">Settings</a>
+                </nav>
+            </div>
+            <div class="header-right">
+                <span class="v2-local-badge"><i class="fas fa-shield-alt"></i> <span data-v2-i18n="local">Local workspace</span></span>
+                <div class="status-indicator" id="statusIndicator" role="status" aria-live="polite" title="System ready">
+                    <span class="status-dot ready"></span>
+                    <span>Ready</span>
+                </div>
+                {% if current_user %}
+                <div class="header-user-menu" id="headerUserMenu">
+                    <div class="header-user-avatar" id="headerUserAvatar" title="{{ current_user.username }}"
+                         role="button" tabindex="0" aria-haspopup="menu" aria-expanded="false"
+                         aria-controls="headerUserDropdown" aria-label="User menu: {{ current_user.username }}">
+                        {{ current_user.username[0]|upper }}
+                    </div>
+                    <div class="header-user-dropdown" id="headerUserDropdown">
+                        <div class="hud-header">
+                            <div class="hud-name">{{ current_user.username }}</div>
+                            <div class="hud-email">{{ current_user.email }}</div>
+                        </div>
+                        <div class="hud-divider"></div>
+                        <a href="javascript:void(0)" onclick="openSettingsModal()" class="hud-item">
+                            <i class="fas fa-cog"></i> Settings
+                        </a>
+                        <div class="hud-divider"></div>
+                        <a href="/logout" class="hud-item hud-logout">
+                            <i class="fas fa-sign-out-alt"></i> Logout
+                        </a>
+                    </div>
+                </div>
+                {% endif %}
+            </div>
+        </header>
+
+        <!-- 主内容区域 -->
+        <div class="main-content">
+            <!-- 左侧面板容器 -->
+            <div class="left-panel">
+                <div class="v2-sidebar-actions" aria-label="Workspace actions">
+                    <button type="button" class="v2-sidebar-action" id="v2BackHomeBtn">
+                        <i class="fas fa-arrow-left"></i><span data-v2-i18n="taskHome">任务首页</span>
+                    </button>
+                    <button type="button" class="v2-sidebar-action primary" id="v2NewCaseBtn">
+                        <i class="fas fa-plus"></i><span data-v2-i18n="newCase">New case</span>
+                    </button>
+                </div>
+                <!-- 文件管理面板（默认显示） -->
+                <div id="fileManagerPanel">
+                    <div class="panel-header">
+                        <div class="v2-panel-title compact">
+                            <span class="v2-panel-kicker" data-v2-i18n="caseFiles">Case files</span>
+                            <h3><i class="fas fa-folder-open"></i> <span data-i18n="panel_files">File Manager</span></h3>
+                        </div>
+                    </div>
+                    
+                    <!-- 文件上传区域 -->
+                    <div class="upload-section">
+                        <div class="upload-area" id="uploadArea">
+                            <i class="fas fa-cloud-upload-alt"></i>
+                            <p data-i18n="upload_drag">Drag WSI files here</p>
+                            <p class="upload-hint" data-i18n="upload_or">or click to select files</p>
+                            <p class="format-hint" data-i18n="upload_fmt">Supports .svs, .ndpi, .tiff and more</p>
+                            <input type="file" id="fileInput" accept=".svs,.ndpi,.tiff,.tif,.vms,.vmu,.scn,.mrxs,.bif" multiple hidden>
+                            <input type="file" id="folderInput" webkitdirectory directory multiple hidden>
+                        </div>
+                        <div class="upload-progress" id="uploadProgress" style="display: none;">
+                            <div class="progress-bar">
+                                <div class="progress-fill" id="progressFill"></div>
+                            </div>
+                            <div class="progress-text" id="progressText" data-i18n="uploading">Uploading...</div>
+                        </div>
+                    </div>
+
+                    <!-- 文件列表 -->
+                    <div class="files-section">
+                        <div class="section-header">
+                            <h4 data-i18n="uploaded_files">Uploaded Files</h4>
+                            <button class="refresh-btn" id="refreshFiles" data-i18n-title="refresh_list" title="Refresh">
+                                <i class="fas fa-sync-alt"></i>
+                            </button>
+                        </div>
+                        <div class="files-list" id="filesList">
+                            <div class="empty-state">
+                                <i class="fas fa-file-medical"></i>
+                                <p data-i18n="no_files">No files uploaded yet</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Patient Level 面板（Patient Level模式时显示） -->
+                <div id="patientLevelPanel" style="display: none;">
+                    <div class="panel-header patient-level-header">
+                        <div class="pl-header-top">
+                            <div class="v2-panel-title compact">
+                                <span class="v2-panel-kicker" data-i18n="pl_case_kicker">患者病例</span>
+                                <h3>
+                                    <i class="fas fa-layer-group"></i>
+                                    <span id="plFolderName">Patient</span>
+                                </h3>
+                            </div>
+                            <div class="pl-header-tools">
+                                <button class="pl-icon-btn" id="backToFileManager" data-i18n-title="back_to_files" title="Back to File Manager">
+                                    <i class="fas fa-arrow-left"></i>
+                                </button>
+                                <button class="pl-stop-btn" id="plStopAnalysis" type="button" hidden>
+                                    <i class="fas fa-stop"></i>
+                                    <span>停止</span>
+                                </button>
+                            </div>
+                        </div>
+                        <div class="pl-header-info">
+                            <span id="plWsiCount" data-i18n="pl_slide_count">0 slides</span>
+                            <span class="pl-header-divider" aria-hidden="true">·</span>
+                            <span id="plStatus" role="status" aria-live="polite" aria-atomic="true">准备上传</span>
+                            <span id="plProgressPercent" class="pl-progress-pct">0%</span>
+                        </div>
+                        <div class="progress-bar pl-header-progress">
+                            <div class="progress-fill" id="plProgressFill"></div>
+                        </div>
+                        <div class="pl-progress-current" id="plProgressCurrent" style="display:none;">
+                            <span id="plCurrentWsiName">--</span>
+                        </div>
+                        <div class="pl-progress-status" id="plProgressStatus" role="status" aria-live="polite" aria-atomic="true"></div>
+                        <span id="plStopLiveStatus" class="copilot-sr-only" role="status" aria-live="polite" aria-atomic="true"></span>
+                        <div class="pl-header-actions">
+                            <button class="pl-start-btn copilot-sr-only" id="plStartAnalysis" type="button" hidden disabled tabindex="-1" aria-hidden="true">
+                                <i class="fas fa-play"></i> <span data-i18n="start_analysis">Start Analysis</span>
+                            </button>
+                        </div>
+                    </div>
+                    
+                    <!-- WSI 切片列表 -->
+                    <div class="pl-wsi-list-section">
+                        <div class="section-header">
+                            <h4><span data-i18n="slide_list">Slide List</span></h4>
+                        </div>
+                        <div class="pl-wsi-list" id="plWsiList">
+                            <!-- 动态填充 -->
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- 路径规划/进度面板（分析时显示） -->
+                <div id="analysisRoutePanel" style="display: none;">
+                    <div class="route-header">
+                        <div class="route-header-top">
+                            <span class="route-mode-tag" id="routeModeTag">
+                                <i class="fas fa-wand-magic-sparkles"></i> 自动模式
+                            </span>
+                            <button class="route-back-btn" id="routeBackBtn" data-i18n-title="back_to_files" title="Back to File Manager">
+                                <i class="fas fa-arrow-left"></i>
+                            </button>
+                        </div>
+                        <div class="route-slide-info">
+                            <i class="fas fa-file-medical"></i>
+                            <span id="routeSlideName">切片名称</span>
+                        </div>
+                        <div class="route-progress-bar">
+                            <div class="route-progress-fill" id="routeProgressFill" style="width: 0%"></div>
+                        </div>
+                        <div class="route-progress-text" id="routeProgressText">
+                            <span class="typing-dots">
+                                <span class="dot"></span>
+                                <span class="dot"></span>
+                                <span class="dot"></span>
+                            </span>
+                            <span class="progress-message" data-i18n="preparing">Preparing analysis...</span>
+                        </div>
+                    </div>
+                    <div class="route-steps-container">
+                        <div class="route-steps-list" id="routeStepsList">
+                            <!-- 动态插入每一步分析进度 -->
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 左侧拖拽条 -->
+            <div class="panel-resizer" id="leftResizer" title="Drag to resize"></div>
+
+            <!-- 中间：WSI查看器 -->
+            <div class="center-panel">
+                <div class="panel-header">
+                    <div class="v2-panel-title">
+                        <span class="v2-panel-kicker" data-v2-i18n="slideStudio">Slide studio</span>
+                        <h3 id="v2SlideTitle"><i class="fas fa-microscope"></i> <span data-v2-i18n="noSlide">No slide selected</span></h3>
+                    </div>
+                    <div class="viewer-controls">
+                        <button class="control-btn" id="zoomInBtn" data-i18n-title="zoom_in" title="Zoom In">
+                            <i class="fas fa-search-plus"></i>
+                        </button>
+                        <button class="control-btn" id="zoomOutBtn" data-i18n-title="zoom_out" title="Zoom Out">
+                            <i class="fas fa-search-minus"></i>
+                        </button>
+                        <button class="control-btn" id="homeBtn" data-i18n-title="reset_view" title="Reset View">
+                            <i class="fas fa-home"></i>
+                        </button>
+                        <button class="control-btn" id="fullscreenBtn" data-i18n-title="fullscreen" title="Fullscreen">
+                            <i class="fas fa-expand"></i>
+                        </button>
+                        <button class="control-btn" id="treeViewBtn" data-i18n-title="analysis_tree" title="Analysis Path Tree">
+                            <i class="fas fa-project-diagram"></i>
+                        </button>
+                        <button class="control-btn" id="screenshotAskBtn" data-i18n-title="screenshot_ask" title="拖拽截取提问">
+                            <i class="fas fa-crop-alt"></i>
+                        </button>
+                        <span class="v2-control-separator" aria-hidden="true"></span>
+                        <div class="agent-controls">
+                            <button class="control-btn agent-btn" id="btnAgentRun" data-i18n-title="run_agent" title="Run Agent Analysis">
+                                <i class="fas fa-play"></i>
+                            </button>
+                            <button class="control-btn" id="btnSaveState" data-i18n-title="save_state" title="保存当前可恢复状态">
+                                <i class="fas fa-save"></i>
+                            </button>
+                            <div class="load-state-dropdown" id="loadStateDropdown">
+                                <button class="control-btn" id="btnLoadState" data-i18n-title="load_state" title="Load Analysis State">
+                                    <i class="fas fa-folder-open"></i>
+                                </button>
+                                <div class="load-state-menu" id="loadStateMenu">
+                                    <div class="load-state-menu-item" id="loadFromCache">
+                                        <i class="fas fa-database"></i>
+                                        <span data-i18n="load_from_cache">从缓存加载</span>
+                                    </div>
+                                    <div class="load-state-menu-item" id="loadFromFile">
+                                        <i class="fas fa-file-import"></i>
+                                        <span data-i18n="load_from_file">从文件加载</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <button class="control-btn" id="exportScreenshotBtn" data-i18n-title="screenshot_export" title="Left: Quick Screenshot | Right: HD Screenshot">
+                            <i class="fas fa-camera"></i>
+                        </button>
+                    </div>
+                </div>
+                
+                <div class="viewer-container">
+                    <!-- OpenSeadragon查看器容器 -->
+                    <div id="openseadragon-viewer" class="wsi-viewer"></div>
+                    
+                    <!-- 空状态显示 - 简洁版 -->
+                    <div class="viewer-empty" id="viewerEmpty">
+                        <span class="v2-empty-icon"><i class="fas fa-microscope"></i></span>
+                        <span class="v2-empty-kicker" data-v2-i18n="workspaceReady">Workspace ready</span>
+                        <h2 data-v2-i18n="openSlide">Open a whole-slide image</h2>
+                        <p data-i18n="upload_to_start">Upload a WSI file to begin analysis</p>
+                        {% if demo_available %}
+                        <button class="demo-load-btn" id="loadDemoBtn" onclick="window.pathchat && window.pathchat.loadDemo('tcga_public_demo')">
+                            <i class="fas fa-play-circle"></i>
+                            <span data-i18n="try_demo">Try Demo Data</span>
+                        </button>
+                        {% endif %}
+                    </div>
+                    
+                    <!-- Agent进度条 -->
+                    <div class="agent-progress" id="agentProgress" style="display: none;">
+                        <div class="progress-bar-container">
+                            <div class="progress-bar" id="agentProgressBar" style="width: 0%"></div>
+                        </div>
+                        <div class="progress-text" id="agentProgressText">准备中...</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 右侧拖拽条 -->
+            <div class="panel-resizer" id="rightResizer" title="Drag to resize"></div>
+
+            <!-- 右侧：多功能面板 -->
+            <div class="right-panel">
+                <!-- 标签页内容 -->
+                <div class="tab-content">
+                    <!-- 聊天标签页 -->
+                    <div class="tab-pane active" id="chatTab">
+                        <!-- 聊天消息区域 -->
+                        <div class="chat-container">
+                    <div class="chat-messages" id="chatMessages">
+                    </div>
+                </div>
+
+                <!-- 输入区域 -->
+                <div class="chat-input-container">
+                    <div class="draft-report-dock" id="draftReportDock" hidden>
+                        <div class="draft-report-actions">
+                            <button type="button" class="draft-report-btn secondary" id="draftReportDockRegenerate">
+                                <i class="fas fa-sync-alt"></i>
+                                <span id="draftReportDockRegenerateLabel">重新生成报告</span>
+                            </button>
+                            <button type="button" class="draft-report-btn primary" id="draftReportDockFinalize">
+                                <i class="fas fa-check"></i>
+                                <span id="draftReportDockFinalizeLabel">同意定稿</span>
+                            </button>
+                        </div>
+                    </div>
+                    <div class="roi-selection-info" id="roiSelectionInfo" style="display: none;">
+                        <div class="roi-info">
+                            <i class="fas fa-crop"></i>
+                            <span data-i18n="roi_selected">ROI Selected</span>
+                            <button class="clear-roi-btn" id="clearRoiBtn">
+                                <i class="fas fa-times"></i>
+                            </button>
+                        </div>
+                    </div>
+                    
+                    <!-- 截图预览区域 -->
+                    <div class="screenshot-preview" id="screenshotPreview" style="display: none;">
+                        <div class="screenshot-preview-header">
+                            <i class="fas fa-image"></i>
+                            <span id="userRoiTrayLabel" data-i18n="screenshot_taken">Region Captured</span>
+                            <button class="clear-screenshot-btn" id="clearScreenshotBtn" data-i18n-title="del_screenshot" title="Delete Screenshot">
+                                <i class="fas fa-times"></i>
+                            </button>
+                        </div>
+                        <div class="user-roi-tray" id="userRoiTray" hidden></div>
+                        <div class="screenshot-preview-image">
+                            <img id="screenshotImage" src="" alt="Screenshot preview">
+                        </div>
+                    </div>
+                    
+                    <div class="input-area">
+                        <textarea 
+                            id="chatInput"
+                            placeholder="Describe what you want to analyze, or send 'Analyze selected region'..."
+                            rows="2"></textarea>
+                        <button class="send-btn" id="sendBtn" disabled>
+                            <i class="fas fa-paper-plane"></i>
+                        </button>
+                    </div>
+                    
+                </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Agent轨迹标签页 -->
+                    <div class="tab-pane" id="agentTab">
+                        <div class="agent-timeline-container">
+                            <div class="timeline-header">
+                                <h4 data-i18n="decision_trace">Decision Trace</h4>
+                                <div class="timeline-controls">
+                                    <button class="control-btn" id="clearTimelineBtn" data-i18n-title="clear_trace" title="Clear Trace">
+                                        <i class="fas fa-trash"></i>
+                                    </button>
+                                </div>
+                            </div>
+                            
+                            <div class="agent-timeline" id="agentTimeline">
+                                <!-- 时间线项目将通过JavaScript动态添加 -->
+                                <div class="timeline-empty">
+                                    <i class="fas fa-robot"></i>
+                                    <p data-i18n="start_agent_hint">Start Agent to begin analysis</p>
+                                </div>
+                            </div>
+                            
+                            <!-- Agent报告区域 -->
+                            <div class="agent-report-section" id="agentReportSection" style="display: none;">
+                                <!-- 报告内容将通过JavaScript动态添加 -->
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- 推理路径标签页 -->
+                    <div class="tab-pane" id="reasoningTab">
+                        <div class="reasoning-tree-container">
+                            <div class="tree-header">
+                                <h4 data-i18n="multiscale_path">Multi-scale Evidence Analysis Path</h4>
+                                <div class="tree-legend">
+                                    <span class="legend-item roi-level-legend roi-level-legend-1">
+                                        <span class="legend-color" aria-hidden="true"></span>
+                                        <span data-i18n="legend_level1">Level 1 · 10× Macro</span>
+                                    </span>
+                                    <span class="legend-item roi-level-legend roi-level-legend-2">
+                                        <span class="legend-color" aria-hidden="true"></span>
+                                        <span data-i18n="legend_level2">Level 2 · 40× Lesion</span>
+                                    </span>
+                                    <span class="legend-item roi-level-legend roi-level-legend-3">
+                                        <span class="legend-color" aria-hidden="true"></span>
+                                        <span data-i18n="legend_level3">Level 3 · 160× Cell</span>
+                                    </span>
+                                </div>
+                            </div>
+                            
+                            <!-- 树状图可视化区域 -->
+                            <div class="tree-visualization" id="treeVisualization">
+                                <div class="tree-empty">
+                                    <i class="fas fa-sitemap"></i>
+                                    <p data-i18n="tree_hint">Analysis path tree will appear after Agent runs</p>
+                                </div>
+                            </div>
+                            
+                            <!-- 当前选中节点详情 -->
+                            <div class="node-details" id="nodeDetails" style="display: none;">
+                                <div class="details-header">
+                                    <h5 data-i18n="node_details">Node Details</h5>
+                                    <button class="control-btn" id="closeNodeDetails">
+                                        <i class="fas fa-times"></i>
+                                    </button>
+                                </div>
+                                <div class="details-content" id="nodeDetailsContent">
+                                    <!-- 节点详情将动态加载 -->
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="tab-pane" id="environmentTab">
+                        <div class="v2-inspector-page">
+                            <div class="v2-page-heading">
+                                <span class="v2-page-icon"><i class="fas fa-sliders-h"></i></span>
+                                <div>
+                                    <h4 data-v2-i18n="environmentTitle">Analysis environment</h4>
+                                    <p data-v2-i18n="environmentHint">Runtime and pathology workflow configuration.</p>
+                                </div>
+                            </div>
+                            <div class="v2-info-card">
+                                <div class="v2-info-row"><span data-v2-i18n="viewerEngine">Viewer engine</span><strong>OpenSeadragon</strong></div>
+                                <div class="v2-info-row"><span data-v2-i18n="slideEngine">WSI engine</span><strong>OpenSlide</strong></div>
+                                <div class="v2-info-row"><span data-v2-i18n="analysisScale">Analysis scale</span><strong>10× · 40× · 160×</strong></div>
+                                <div class="v2-info-row"><span data-v2-i18n="workspaceMode">Workspace</span><strong data-v2-i18n="localPrivate">Local & private</strong></div>
+                            </div>
+                            <button type="button" class="v2-secondary-button" onclick="openSettingsModal()">
+                                <i class="fas fa-cog"></i><span data-v2-i18n="openSettings">Open model settings</span>
+                            </button>
+                        </div>
+                    </div>
+
+                    <div class="tab-pane" id="reviewTab">
+                        <div class="v2-inspector-page">
+                            <div class="v2-page-heading">
+                                <span class="v2-page-icon review"><i class="fas fa-clipboard-check"></i></span>
+                                <div>
+                                    <h4 data-v2-i18n="reviewTitle">Human review</h4>
+                                    <p data-v2-i18n="reviewHint">Validate every evidence layer before signing out.</p>
+                                </div>
+                            </div>
+                            <div class="v2-review-list" id="v2ReviewList">
+                                <div class="v2-review-item" data-review-stage="macro"><span class="v2-review-status pending"><i class="fas fa-circle"></i></span><div><strong data-v2-i18n="macroReview">Low-power overview</strong><small data-v2-i18n="waitingAnalysis">Waiting for analysis</small></div></div>
+                                <div class="v2-review-item" data-review-stage="lesion"><span class="v2-review-status pending"><i class="fas fa-circle"></i></span><div><strong data-v2-i18n="lesionReview">Lesion evidence</strong><small data-v2-i18n="waitingAnalysis">Waiting for analysis</small></div></div>
+                                <div class="v2-review-item" data-review-stage="cell"><span class="v2-review-status pending"><i class="fas fa-circle"></i></span><div><strong data-v2-i18n="cellReview">Cell-level evidence</strong><small data-v2-i18n="waitingAnalysis">Waiting for analysis</small></div></div>
+                                <div class="v2-review-item" data-review-stage="report"><span class="v2-review-status pending"><i class="fas fa-circle"></i></span><div><strong data-v2-i18n="reportReview">Diagnostic report</strong><small data-v2-i18n="waitingAnalysis">Waiting for analysis</small></div></div>
+                            </div>
+                            <div class="v2-review-note"><i class="fas fa-user-md"></i><span data-v2-i18n="reviewNote">AI findings remain editable and require pathologist confirmation.</span></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 人机协作确认浮动条（底部小型，不遮挡视线）- 保留兼容，默认隐藏 -->
+    <div class="confirmation-bar" id="confirmationBar" style="display: none;">
+        <div class="confirmation-bar-content">
+            <div class="confirmation-bar-info">
+                <span class="confirmation-bar-icon" id="confirmBarIcon">🔵</span>
+                <span class="confirmation-bar-text" id="confirmBarText"></span>
+                <span class="confirmation-bar-count" id="confirmBarCount"></span>
+            </div>
+            <div class="confirmation-bar-actions">
+                <button class="bar-btn bar-btn-confirm" id="btnConfirmAccept" data-i18n-title="bar_accept_title" title="Accept AI selection and continue">
+                    <i class="fas fa-check"></i> <span data-i18n="bar_accept">Accept</span>
+                </button>
+                <button class="bar-btn bar-btn-manual" id="btnConfirmOverride" data-i18n-title="bar_override_title" title="Use current adjusted selection">
+                    <i class="fas fa-edit"></i> <span data-i18n="bar_override">Adjusted</span>
+                </button>
+                <button class="bar-btn bar-btn-skip" id="btnConfirmSkip" data-i18n-title="bar_skip_title" title="Skip this region">
+                    <i class="fas fa-forward"></i> <span data-i18n="bar_skip">Skip</span>
+                </button>
+                <button class="bar-btn bar-btn-auto" id="btnConfirmAuto" data-i18n-title="bar_auto_title" title="Switch to full auto mode">
+                    <i class="fas fa-robot"></i> <span data-i18n="bar_auto">Switch to Auto</span>
+                </button>
+            </div>
+        </div>
+        <div class="manual-mode-bar" id="manualModeBar" style="display: none;">
+            <span><i class="fas fa-draw-polygon"></i> <span data-i18n="manual_mode_hint">Manual mode: drag to draw selection on viewer</span></span>
+            <span class="manual-count" id="manualCount" data-i18n="manual_count_init">Selected: 0</span>
+            <button class="bar-btn bar-btn-done" id="btnBarDone">
+                <i class="fas fa-check-circle"></i> <span data-i18n="bar_done">Done</span>
+            </button>
+            <button class="bar-btn bar-btn-cancel" id="btnBarCancel">
+                <i class="fas fa-times"></i> <span data-i18n="btn_cancel">Cancel</span>
+            </button>
+        </div>
+    </div>
+
+    <!-- PathCopilot 确认对话框 - 类似Cursor Plan模式 -->
+    <div class="copilot-confirm-modal" id="copilotConfirmModal" style="display: none;"
+         role="dialog" aria-modal="true" aria-labelledby="confirmModalTitle" aria-hidden="true">
+        <div class="copilot-confirm-overlay" id="copilotConfirmOverlay"></div>
+        <div class="copilot-confirm-content">
+            <!-- 对话框头部 -->
+            <div class="copilot-confirm-header">
+                <div class="copilot-confirm-icon" id="confirmModalIcon">
+                    <i class="fas fa-robot"></i>
+                </div>
+                <div class="copilot-confirm-title-group">
+                    <h3 id="confirmModalTitle">AI Suggestion</h3>
+                    <span class="copilot-confirm-step" id="confirmModalStep"></span>
+                </div>
+                <button class="copilot-confirm-close" id="confirmModalClose" data-i18n-title="modal_close_title" title="Close without submitting a decision" aria-label="Close without submitting a decision">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            
+            <!-- 对话框主体 -->
+            <div class="copilot-confirm-body">
+                <!-- AI思考过程展示 -->
+                <div class="copilot-thinking" id="confirmModalThinking">
+                    <div class="thinking-header">
+                        <i class="fas fa-lightbulb"></i>
+                        <span data-i18n="modal_ai_analysis">AI Analysis</span>
+                    </div>
+                    <div class="thinking-content" id="confirmModalThinkingContent">
+                        Analyzing region features...
+                    </div>
+                </div>
+                
+                <div class="copilot-proposal" id="confirmModalProposal">
+                    <div class="proposal-header">
+                        <i class="fas fa-map-marked-alt"></i>
+                        <span data-i18n="modal_proposal">Selection Proposal</span>
+                    </div>
+                    <div class="proposal-content" id="confirmModalProposalContent">
+                        <!-- 动态填充选区信息 -->
+                    </div>
+                </div>
+                
+                <!-- ROI预览缩略图 -->
+                <div class="copilot-preview" id="confirmModalPreview">
+                    <div class="preview-header">
+                        <i class="fas fa-image"></i>
+                        <span data-i18n="modal_preview">Region Preview</span>
+                    </div>
+                    <div class="preview-thumbnails" id="confirmModalThumbnails">
+                        <!-- 动态填充缩略图 -->
+                    </div>
+                </div>
+            </div>
+            
+            <!-- 对话框底部按钮 -->
+            <div class="copilot-confirm-footer">
+                <div class="footer-hint">
+                    <i class="fas fa-keyboard"></i>
+                    <span data-i18n="modal_kbd_hint">Esc closes this dialog without approving. Use the focused button to submit a decision.</span>
+                </div>
+                <div class="footer-actions">
+                    <button class="copilot-btn copilot-btn-skip" id="btnModalSkip" data-i18n-title="modal_skip_title" title="Skip this region">
+                        <i class="fas fa-forward"></i>
+                        <span data-i18n="bar_skip">Skip</span>
+                    </button>
+                    <button class="copilot-btn copilot-btn-edit" id="btnModalEdit" data-i18n-title="modal_edit_title" title="Manually adjust selection">
+                        <i class="fas fa-edit"></i>
+                        <span data-i18n="modal_edit">Manual Adjust</span>
+                    </button>
+                    <button class="copilot-btn copilot-btn-accept" id="btnModalAccept" data-i18n-title="modal_accept_title" title="Accept AI suggestion">
+                        <i class="fas fa-check"></i>
+                        <span data-i18n="bar_accept">Accept</span>
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="draft-report-modal" id="draftReportModal" hidden inert style="display: none;"
+         role="dialog" aria-modal="false" aria-labelledby="draftReportTitle" aria-hidden="true">
+        <div class="draft-report-overlay" id="draftReportOverlay"></div>
+        <div class="draft-report-dialog">
+            <header class="draft-report-header">
+                <div>
+                    <p class="draft-report-kicker" id="draftReportKicker">HAFL</p>
+                    <h3 id="draftReportTitle">拟报告如下，请问是否同意定稿？</h3>
+                </div>
+                <button type="button" class="draft-report-close" id="draftReportClose"
+                        title="关闭弹窗，不批准定稿">
+                    <i class="fas fa-times"></i>
+                </button>
+            </header>
+            <div class="draft-report-body">
+                <section class="draft-report-main">
+                    <label class="draft-report-label" for="draftReportEditor" id="draftReportEditorLabel">拟报告正文（可直接改动）</label>
+                    <textarea id="draftReportEditor" class="draft-report-editor" rows="18"></textarea>
+                </section>
+                <aside class="draft-report-side">
+                    <h4 id="draftReportFindingsTitle">引用 Finding 并拒绝</h4>
+                    <div id="draftReportFindings" class="draft-report-findings"></div>
+                    <label class="draft-report-label" for="draftReportFeedback" id="draftReportFeedbackLabel">反馈或纠正意见</label>
+                    <textarea id="draftReportFeedback" class="draft-report-feedback" rows="4"
+                              placeholder="例如：该区域并非肿瘤，请据此修订结论……"></textarea>
+                </aside>
+            </div>
+            <footer class="draft-report-footer">
+                <p class="draft-report-hint" id="draftReportHint">关闭弹窗不会定稿。请在切片上点选、截取或引用后重新生成报告，或直接同意定稿。</p>
+                <div class="draft-report-actions">
+                    <button type="button" class="draft-report-btn secondary" id="draftReportAddRoi">
+                        <i class="fas fa-sync-alt"></i> <span id="draftReportAddRoiLabel">重新生成报告</span>
+                    </button>
+                    <button type="button" class="draft-report-btn primary" id="draftReportFinalize">
+                        <i class="fas fa-check"></i> <span id="draftReportFinalizeLabel">同意定稿</span>
+                    </button>
+                </div>
+            </footer>
+        </div>
+    </div>
+
+    <!-- 加载指示器 -->
+    <div class="loading-overlay" id="loadingOverlay" style="display: none;">
+        <div class="loading-content">
+            <div class="spinner"></div>
+            <p id="loadingText" data-i18n="processing">Processing...</p>
+        </div>
+    </div>
+
+    <!-- 通知提示 -->
+    <div class="notification" id="notification" style="display: none;">
+        <div class="notification-content">
+            <i class="notification-icon"></i>
+            <span class="notification-text"></span>
+            <button class="notification-close">
+                <i class="fas fa-times"></i>
+            </button>
+        </div>
+    </div>
+
+    <!-- 树状图可视化模态窗口 -->
+    <div class="tree-modal" id="treeModal" style="display: none;" role="dialog" aria-modal="true" aria-labelledby="treeModalTitle">
+        <div class="tree-modal-overlay" id="treeModalOverlay"></div>
+        <div class="tree-modal-content">
+            <!-- 模态窗口头部 -->
+            <div class="tree-modal-header">
+                <h2 id="treeModalTitle"><i class="fas fa-project-diagram"></i> <span data-i18n="tree_modal_title">Analysis Tree Structure</span></h2>
+                <button class="tree-modal-close" id="treeModalClose" type="button" aria-label="关闭分析树">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            
+            <!-- 模态窗口主体 -->
+            <div class="tree-modal-body">
+                <!-- 左侧：层级结构（统一面板，点击节点时在下方展示详情） -->
+                <div class="tree-structure-panel">
+                    <div class="tree-structure-header">
+                        <h3><i class="fas fa-list"></i> <span data-i18n="tree_hierarchy">Hierarchy</span></h3>
+                        <div class="tree-structure-stats">
+                            <span class="stat-item">
+                                <i class="fas fa-layer-group"></i>
+                                <span id="totalLayers">0</span> <span data-i18n="stat_layers">layers</span>
+                            </span>
+                            <span class="stat-item">
+                                <i class="fas fa-cube"></i>
+                                <span id="totalROIs">0</span> ROIs
+                            </span>
+                        </div>
+                    </div>
+                    <div class="tree-structure-content" id="treeStructureContent">
+                        <div class="tree-empty-state">
+                            <i class="fas fa-sitemap"></i>
+                            <p data-i18n="no_data">No data available</p>
+                        </div>
+                    </div>
+                    <!-- 节点详情直接嵌入层级结构面板底部 -->
+                    <div class="tree-node-details-inline" id="pathDetailsPanel" style="display: none;">
+                        <div class="details-divider"></div>
+                        <div id="pathDetailsContent"></div>
+                    </div>
+                </div>
+                
+                <!-- ⭐ 可拖拽分隔条 -->
+                <div class="tree-resizer" id="treeResizer"></div>
+                
+                <!-- 右侧：可视化树状图 -->
+                <div class="tree-visualization-panel">
+                    <div class="tree-visualization-header">
+                        <h3><i class="fas fa-sitemap"></i> <span data-i18n="tree_visual">Visual Tree</span></h3>
+                        <div class="tree-visualization-controls">
+                            <button class="tree-control-btn" id="treeZoomIn" type="button" data-i18n-title="zoom_in" title="Zoom In" aria-label="放大分析树">
+                                <i class="fas fa-search-plus"></i>
+                            </button>
+                            <button class="tree-control-btn" id="treeZoomOut" type="button" data-i18n-title="zoom_out" title="Zoom Out" aria-label="缩小分析树">
+                                <i class="fas fa-search-minus"></i>
+                            </button>
+                            <button class="tree-control-btn" id="treeReset" type="button" data-i18n-title="reset_view" title="Reset" aria-label="复位分析树">
+                                <i class="fas fa-compress-arrows-alt"></i>
+                            </button>
+                            <button class="tree-control-btn" id="treeExport" type="button" data-i18n-title="export_image" title="Export Image" aria-label="导出分析树图片">
+                                <i class="fas fa-download"></i>
+                            </button>
+                        </div>
+                    </div>
+                    <div class="tree-visualization-content" id="treeVisualizationContent">
+                        <svg id="treeSvg" width="100%" height="100%"></svg>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Patient Level 确认弹窗 -->
+    <div class="patient-level-modal" id="patientLevelModal" style="display: none;">
+        <div class="patient-level-modal-content">
+            <div class="patient-level-modal-header">
+                <i class="fas fa-folder-tree"></i>
+                <h3 data-i18n="pl_modal_title">检测到多个切片文件</h3>
+            </div>
+            <div class="patient-level-modal-body">
+                <p class="modal-message" id="plModalMessage">
+                    您一次性选择了 <strong id="detectedFileCount">0</strong> 个WSI文件，
+                    这些可能来自同一患者的不同部位切片。
+                </p>
+                <div class="detected-files-preview" id="detectedFilesPreview">
+                    <!-- 动态填充文件列表预览 -->
+                </div>
+                <div class="patient-level-options">
+                    <div class="option-card recommended" id="optionPatientLevel">
+                        <div class="option-icon"><i class="fas fa-users-medical"></i></div>
+                        <div class="option-content">
+                            <h4 data-i18n="pl_option_patient">Patient Level 分析</h4>
+                            <p data-i18n="pl_option_patient_desc">逐个分析所有切片，自动汇总生成患者级别综合诊断报告</p>
+                            <span class="recommended-badge" data-i18n="pl_recommended">推荐</span>
+                        </div>
+                    </div>
+                    <div class="option-card" id="optionSingleMode">
+                        <div class="option-icon"><i class="fas fa-file-medical"></i></div>
+                        <div class="option-content">
+                            <h4 data-i18n="pl_option_single">逐个上传</h4>
+                            <p data-i18n="pl_option_single_desc">依次上传文件，手动选择每张切片进行单独分析</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="patient-level-modal-footer">
+                <button class="btn-cancel" id="patientLevelCancel" data-i18n="btn_cancel">取消</button>
+                <button class="btn-confirm" id="patientLevelConfirm" data-i18n="pl_confirm_choice">确认选择</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Patient Level 进度面板 -->
+    <div class="patient-level-progress-panel" id="patientLevelProgressPanel" style="display: none;">
+        <div class="progress-panel-header">
+            <i class="fas fa-microscope"></i>
+            <span data-i18n="pl_progress_title">Patient Level 分析进行中</span>
+            <button class="close-panel-btn" id="closeProgressPanel"><i class="fas fa-times"></i></button>
+        </div>
+        <div class="progress-panel-body">
+            <div class="patient-info-bar">
+                <span id="patientFolderDisplay" data-i18n="pl_patient_folder">患者文件夹: --</span>
+                <span id="patientWsiCountDisplay" data-i18n="pl_slide_count">切片: 0/0</span>
+            </div>
+            <div class="wsi-progress-list" id="wsiProgressList">
+                <!-- 动态填充WSI进度列表 -->
+            </div>
+            <div class="overall-progress">
+                <div class="progress-bar">
+                    <div class="progress-fill" id="patientOverallProgress"></div>
+                </div>
+                <div class="progress-text" id="patientProgressText" data-i18n="prepare_analysis">准备分析...</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Settings Modal -->
+    <div class="settings-modal-overlay" id="settingsModalOverlay" style="display:none;" role="dialog" aria-modal="true" aria-labelledby="productSettingsTitle">
+        <div class="product-settings-shell">
+            <aside class="product-settings-sidebar">
+                <button type="button" class="product-settings-back" onclick="closeSettingsModal()">
+                    <i class="fas fa-arrow-left" aria-hidden="true"></i>
+                    <span data-i18n="settings_back_workspace">Back to workspace</span>
+                </button>
+                <label class="product-settings-search">
+                    <i class="fas fa-search" aria-hidden="true"></i>
+                    <input type="search" id="settingsSearchInput" data-i18n-placeholder="settings_search_placeholder" placeholder="Search settings">
+                </label>
+                <p class="product-settings-nav-label" data-i18n="settings_personal">Personal</p>
+                <nav class="product-settings-nav" aria-label="Settings">
+                    <button type="button" class="is-active" data-settings-target="language"><i class="fas fa-language"></i><span data-i18n="settings_nav_language">Language</span></button>
+                    <button type="button" data-settings-target="appearance"><i class="fas fa-sun"></i><span data-i18n="settings_nav_appearance">Appearance</span></button>
+                    <button type="button" data-settings-target="model"><i class="fas fa-plug"></i><span data-i18n="settings_nav_model">AI model</span></button>
+                    <button type="button" data-settings-target="account"><i class="far fa-user-circle"></i><span data-i18n="settings_nav_account">Account</span></button>
+                    <button type="button" data-settings-target="usage"><i class="far fa-chart-bar"></i><span data-i18n="settings_nav_usage">Usage</span></button>
+                </nav>
+            </aside>
+
+            <main class="product-settings-main">
+                <header class="product-settings-header">
+                    <div>
+                        <p>PathCopilot</p>
+                        <h1 id="productSettingsTitle" data-i18n="stg_title">Settings</h1>
+                    </div>
+                    <button type="button" class="product-settings-close" onclick="closeSettingsModal()" aria-label="Close settings"><i class="fas fa-times"></i></button>
+                </header>
+
+                <div class="product-settings-content">
+                    <section class="product-settings-panel is-active" data-settings-panel="language" data-settings-search="language interface english chinese 语言 中文 英文">
+                        <div class="product-settings-panel-heading">
+                            <span class="product-settings-panel-icon"><i class="fas fa-language"></i></span>
+                            <div><h2 data-i18n="settings_language_title">Interface language</h2><p data-i18n="settings_language_subtitle">Changes apply immediately and are saved on this device.</p></div>
+                        </div>
+                        <div class="product-settings-card product-settings-row-card">
+                            <div><strong id="interfaceLanguageHeading" data-i18n="settings_language_label">Display language</strong><small data-i18n="settings_language_note">Choose the language used throughout PathCopilot.</small></div>
+                            <div class="interface-language-segment" role="radiogroup" aria-labelledby="interfaceLanguageHeading">
+                                <label><input type="radio" name="interfaceLanguage" value="zh"><span>简体中文</span></label>
+                                <label><input type="radio" name="interfaceLanguage" value="en"><span>English</span></label>
+                            </div>
+                        </div>
+                    </section>
+
+                    <section class="product-settings-panel" data-settings-panel="appearance" data-settings-search="appearance theme color roi palette 外观 配色 颜色">
+                        <div class="product-settings-panel-heading">
+                            <span class="product-settings-panel-icon"><i class="fas fa-sun"></i></span>
+                            <div><h2 data-i18n="settings_appearance_title">Appearance</h2><p data-i18n="settings_appearance_subtitle">Personalize the workspace and ROI colors.</p></div>
+                        </div>
+                        <div class="product-settings-subsection">
+                            <h3 data-i18n="settings_workspace_theme">Workspace color</h3>
+                            <div class="appearance-preset-grid" role="radiogroup">
+                                <label class="appearance-preset"><input type="radio" name="frontendAppearance" value="light"><span><i class="appearance-preview appearance-preview-light"></i><b data-i18n="settings_theme_light">Gray white</b><small data-i18n="settings_theme_light_note">Optional neutral gray-white</small></span></label>
+                                <label class="appearance-preset"><input type="radio" name="frontendAppearance" value="warm"><span><i class="appearance-preview appearance-preview-warm"></i><b data-i18n="settings_theme_warm">Warm</b><small data-i18n="settings_theme_warm_note">Default soft ivory workspace</small></span></label>
+                                <label class="appearance-preset"><input type="radio" name="frontendAppearance" value="contrast"><span><i class="appearance-preview appearance-preview-contrast"></i><b data-i18n="settings_theme_contrast">High contrast</b><small data-i18n="settings_theme_contrast_note">Sharper visual separation</small></span></label>
+                            </div>
+                        </div>
+
+                        <section class="product-settings-subsection roi-palette-settings" aria-labelledby="roiPaletteHeading">
+                            <div class="settings-section-heading"><div><h3 id="roiPaletteHeading" data-i18n="settings_roi_palette_title">ROI colors</h3><p data-i18n="settings_roi_palette_subtitle">Choose a palette for the three ROI levels. Changes are previewed immediately.</p></div></div>
+                            <div class="roi-palette-grid" role="radiogroup" aria-labelledby="roiPaletteHeading">
+                                <label class="roi-palette-option"><input type="radio" name="roiPalettePreset" value="classic"><span class="roi-palette-card"><span class="roi-palette-card-heading"><strong data-i18n="settings_palette_classic">Classic</strong><small data-i18n="settings_palette_classic_note">Original colors</small></span><span class="roi-palette-swatches"><i style="--swatch:#FF0000"></i><i style="--swatch:#0066FF"></i><i style="--swatch:#00CC00"></i></span></span></label>
+                                <label class="roi-palette-option"><input type="radio" name="roiPalettePreset" value="okabeIto"><span class="roi-palette-card"><span class="roi-palette-card-heading"><strong data-i18n="settings_palette_colorblind">Color-vision friendly</strong><small class="roi-recommended" data-i18n="settings_recommended">Recommended</small></span><span class="roi-palette-swatches"><i style="--swatch:#D55E00"></i><i style="--swatch:#0072B2"></i><i style="--swatch:#CC79A7"></i></span></span></label>
+                                <label class="roi-palette-option"><input type="radio" name="roiPalettePreset" value="softAccessible"><span class="roi-palette-card"><span class="roi-palette-card-heading"><strong data-i18n="settings_palette_soft">Soft accessible</strong><small data-i18n="settings_palette_soft_note">Lower visual intensity</small></span><span class="roi-palette-swatches"><i style="--swatch:#C75B39"></i><i style="--swatch:#356FA3"></i><i style="--swatch:#8264A5"></i></span></span></label>
+                                <label class="roi-palette-option"><input type="radio" name="roiPalettePreset" value="highContrast"><span class="roi-palette-card"><span class="roi-palette-card-heading"><strong data-i18n="settings_palette_contrast">High contrast</strong><small data-i18n="settings_palette_contrast_note">For low-contrast displays</small></span><span class="roi-palette-swatches"><i style="--swatch:#111827"></i><i style="--swatch:#0077B6"></i><i style="--swatch:#F59E0B"></i></span></span></label>
+                                <label class="roi-palette-option roi-palette-option-custom"><input type="radio" name="roiPalettePreset" value="custom"><span class="roi-palette-card"><span class="roi-palette-card-heading"><strong data-i18n="settings_palette_custom">Custom</strong><small data-i18n="settings_palette_custom_note">Choose each level</small></span><span class="roi-palette-custom-icon"><i class="fas fa-sliders-h"></i></span></span></label>
+                            </div>
+                            <div class="roi-custom-color-controls" id="roiCustomColorControls" hidden>
+                                <label><span><b>Level 1</b><small>Low-magnification view</small></span><span class="roi-color-picker"><input type="color" value="#D55E00" data-roi-custom-color="level1" aria-label="Level 1 ROI color"><output data-roi-color-output="level1">#D55E00</output></span></label>
+                                <label><span><b>Level 2</b><small>Intermediate-magnification view</small></span><span class="roi-color-picker"><input type="color" value="#0072B2" data-roi-custom-color="level2" aria-label="Level 2 ROI color"><output data-roi-color-output="level2">#0072B2</output></span></label>
+                                <label><span><b>Level 3</b><small>High-magnification view</small></span><span class="roi-color-picker"><input type="color" value="#CC79A7" data-roi-custom-color="level3" aria-label="Level 3 ROI color"><output data-roi-color-output="level3">#CC79A7</output></span></label>
+                            </div>
+                            <div class="roi-accessibility-note"><i class="fas fa-universal-access"></i><span data-i18n="settings_roi_accessibility_note">ROI levels are identified by Level 1–3 text labels as well as color.</span></div>
+                            <p class="roi-palette-status" id="roiPaletteStatus" aria-live="polite"></p>
+                        </section>
+                    </section>
+
+                    <section class="product-settings-panel" data-settings-panel="model" data-settings-search="model api key endpoint provider openai 模型 密钥 接口 服务商">
+                        <div class="product-settings-panel-heading">
+                            <span class="product-settings-panel-icon"><i class="fas fa-plug"></i></span>
+                            <div><h2 data-i18n="settings_model_title">AI model</h2><p data-i18n="settings_model_subtitle">Connect an OpenAI-compatible provider before chatting or analyzing slides.</p></div>
+                        </div>
+                        <section class="product-settings-subsection settings-section product-model-settings" aria-labelledby="modelSettingsHeading">
+                            <h3 id="modelSettingsHeading" data-i18n="stg_section">LLM Configuration</h3>
+                            <div class="settings-provider-badge">
+                                <span><i class="fas fa-plug"></i> <strong data-i18n="stg_openai_compatible">OpenAI-compatible API</strong></span>
+                                <span id="effectiveProviderLabel"></span>
+                            </div>
+                            <div class="settings-default-notice" id="activeLlmNotice" aria-live="polite"></div>
+                            <div class="settings-form-group">
+                                <label for="settingsApiUrl" data-i18n="stg_api_url">API endpoint</label>
+                                <input type="url" id="settingsApiUrl" data-i18n-placeholder="stg_api_url_placeholder" placeholder="https://provider.example/v1/chat/completions" autocomplete="url" spellcheck="false">
+                                <p class="settings-hint" data-i18n="stg_api_url_hint">Enter the complete OpenAI-compatible chat-completions URL.</p>
+                            </div>
+                            <div class="settings-form-group">
+                                <label for="settingsModel" data-i18n="stg_model_name">Model</label>
+                                <input type="text" id="settingsModel" data-i18n-placeholder="stg_model_placeholder" placeholder="e.g. gpt-5.4" spellcheck="false">
+                                <p class="settings-hint" data-i18n="stg_model_hint">Use the exact model identifier exposed by your provider.</p>
+                            </div>
+                            <div class="settings-form-group">
+                                <label><span data-i18n="stg_api_keys">API Keys</span> <span id="keyCount">(0)</span></label>
+                                <div id="apiKeysList"></div>
+                                <button type="button" class="settings-add-key-btn" onclick="addApiKeyRow('')"><i class="fas fa-plus"></i> <span data-i18n="stg_add_key">Add API Key</span></button>
+                                <p class="settings-hint" data-i18n="stg_multi_key_hint">Paste multiple keys at once (one per line), or add them individually.</p>
+                            </div>
+                            <div class="model-settings-actions">
+                                <button type="button" class="settings-test-btn" id="testLlmBtn" onclick="testLlmConnection()"><i class="fas fa-bolt"></i> <span data-i18n="stg_test">Test Connection</span></button>
+                                <button type="button" class="settings-save-btn" onclick="saveSettings()"><span data-i18n="stg_save">Save Settings</span></button>
+                            </div>
+                            <p class="settings-test-result" id="testResult" aria-live="polite"></p>
+                            <div class="connection-diagnostic" id="connectionDiagnostic" hidden>
+                                <strong data-i18n="stg_diagnostic_title">Connection diagnostic</strong>
+                                <p id="connectionDiagnosticSummary"></p>
+                                <p id="connectionDiagnosticUpstream"></p>
+                                <ul id="connectionDiagnosticSuggestions"></ul>
+                            </div>
+                        </section>
+                    </section>
+
+                    <section class="product-settings-panel" data-settings-panel="account" data-settings-search="account profile switch logout 账户 切换 退出">
+                        <div class="product-settings-panel-heading"><span class="product-settings-panel-icon"><i class="far fa-user-circle"></i></span><div><h2 data-i18n="settings_account_title">Account</h2><p data-i18n="settings_account_subtitle">Manage the account used for this workspace.</p></div></div>
+                        <div class="product-settings-card product-account-card">
+                            <span class="product-account-avatar">{{ (current_user.username[0] if current_user and current_user.username else 'P') | upper }}</span>
+                            <div><strong>{{ current_user.username if current_user else 'PathCopilot user' }}</strong><small>{{ current_user.email if current_user and current_user.email else 'Local workspace' }}</small></div>
+                            <span class="product-account-status" data-i18n="settings_account_active">Active</span>
+                        </div>
+                        <div class="product-settings-card product-account-actions">
+                            <a href="/logout?next=login"><span><i class="fas fa-exchange-alt"></i><b data-i18n="settings_switch_account">Switch account</b></span><i class="fas fa-chevron-right"></i></a>
+                            <a href="/logout" class="is-danger"><span><i class="fas fa-sign-out-alt"></i><b data-i18n="settings_sign_out">Sign out</b></span><i class="fas fa-chevron-right"></i></a>
+                        </div>
+                    </section>
+
+                    <section class="product-settings-panel" data-settings-panel="usage" data-settings-search="usage quota analysis chat 用量 配额 对话 分析">
+                        <div class="product-settings-panel-heading"><span class="product-settings-panel-icon"><i class="far fa-chart-bar"></i></span><div><h2 data-i18n="settings_usage_title">Usage</h2><p data-i18n="settings_usage_subtitle">Today's PathCopilot activity.</p></div></div>
+                        <div class="product-usage-grid" id="productUsageGrid" aria-live="polite">
+                            <article class="product-usage-card"><span><i class="far fa-comments"></i><b data-i18n="settings_usage_chat">Conversations</b></span><strong id="settingsChatUsage">—</strong><small id="settingsChatUsageNote" data-i18n="settings_usage_loading">Loading usage…</small><i class="product-usage-track"><i id="settingsChatUsageBar"></i></i></article>
+                            <article class="product-usage-card"><span><i class="fas fa-microscope"></i><b data-i18n="settings_usage_wsi">WSI analyses</b></span><strong id="settingsWsiUsage">—</strong><small id="settingsWsiUsageNote" data-i18n="settings_usage_loading">Loading usage…</small><i class="product-usage-track"><i id="settingsWsiUsageBar"></i></i></article>
+                        </div>
+                    </section>
+
+                    <div class="product-settings-empty" id="productSettingsEmpty" hidden><i class="fas fa-search"></i><strong data-i18n="settings_no_results">No matching settings</strong></div>
+                </div>
+            </main>
+        </div>
+    </div>
+
+    <div class="api-key-setup-overlay" id="apiKeySetupPrompt" hidden role="dialog" aria-modal="true" aria-labelledby="apiKeySetupTitle" aria-describedby="apiKeySetupBody">
+        <div class="api-key-setup-card">
+            <span class="api-key-setup-icon" aria-hidden="true"><i class="fas fa-key"></i></span>
+            <div class="api-key-setup-copy">
+                <h2 id="apiKeySetupTitle" data-i18n="settings_api_required_title">Connect an AI model</h2>
+                <p id="apiKeySetupBody" data-i18n="settings_api_required_body">Add an OpenAI-compatible endpoint, model, and API key before chatting or analyzing slides.</p>
+            </div>
+            <div class="api-key-setup-actions">
+                <button type="button" class="api-key-setup-later" onclick="dismissApiKeySetupPrompt()" data-i18n="settings_api_required_later">Later</button>
+                <button type="button" class="api-key-setup-primary" onclick="openApiKeySettings()"><span data-i18n="settings_api_required_action">Open Settings</span><i class="fas fa-chevron-right"></i></button>
+            </div>
+        </div>
+    </div>
+
+    <div class="specimen-site-overlay" id="specimenSitePrompt" hidden role="dialog" aria-modal="true" aria-labelledby="specimenSiteTitle" aria-describedby="specimenSiteBody">
+        <div class="specimen-site-card">
+            <span class="specimen-site-icon" aria-hidden="true"><i class="fas fa-map-marker-alt"></i></span>
+            <div class="specimen-site-copy">
+                <h2 id="specimenSiteTitle" data-i18n="specimen_site_title">Confirm the sampling site</h2>
+                <p id="specimenSiteBody" data-i18n="specimen_site_body">Uploaded slides have no trusted organ metadata. Please enter the sampling site, or choose Unknown. The model must not guess the organ from a low-power overview.</p>
+                <p class="specimen-site-filename" id="specimenSiteFilename"></p>
+                <label class="specimen-site-label" for="specimenSiteInput" data-i18n="specimen_site_label">Sampling site</label>
+                <input id="specimenSiteInput" type="text" maxlength="80" autocomplete="off" data-i18n-placeholder="specimen_site_placeholder" placeholder="e.g. uterus, breast, lung">
+                <div class="specimen-site-chips" id="specimenSiteChips" role="group"></div>
+                <p class="specimen-site-hint" data-i18n="specimen_site_hint">If you do not know, choose Unknown. This is used only as specimen source, not as a diagnosis.</p>
+            </div>
+            <div class="specimen-site-actions">
+                <button type="button" class="specimen-site-later" id="specimenSiteLater" data-i18n="specimen_site_later">Later</button>
+                <button type="button" class="specimen-site-unknown" id="specimenSiteUnknown" data-i18n="specimen_site_unknown">Unknown</button>
+                <button type="button" class="specimen-site-primary" id="specimenSiteConfirm" data-i18n="specimen_site_confirm">Confirm</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- i18n Translation Engine -->
+    <script>
+    const WS_I18N = {
+        en: {
+            // Panels
+            panel_files: 'File Manager',
+            upload_drag: 'Drag WSI files here',
+            upload_or:   'or click to select files',
+            upload_fmt:  'Supports .svs, .ndpi, .tiff and more',
+            uploading:   'Uploading...',
+            uploaded_files: 'Uploaded Files',
+            refresh_list:'Refresh file list',
+            no_files:    'No files uploaded yet',
+            back_to_files: 'Back to File Manager',
+            slide_list:  'Slide List',
+            comprehensive_report: 'Comprehensive Report',
+            download_word: 'Download Word Report',
+            rerun_orchestrator: 'Regenerate Summary',
+            rerun_wsi: 'Reanalyze',
+            rerun_orchestrator_title: 'Regenerate Comprehensive Report',
+            rerun_orchestrator_hint: 'Optional: add a focused instruction for regeneration',
+            rerun_orchestrator_running: 'Regenerating summary...',
+            rerun_orchestrator_success: 'Summary regenerated successfully',
+            rerun_wsi_confirm: 'Reanalyze this slide?',
+            rerun_wsi_running: 'Reanalyzing slide...',
+            start_analysis: 'Start Analysis',
+            preparing:   'Preparing analysis...',
+            // Viewer controls (titles)
+            zoom_in:     'Zoom In',
+            zoom_out:    'Zoom Out',
+            reset_view:  'Reset View',
+            fullscreen:  'Fullscreen',
+            analysis_tree: 'Analysis Path Tree',
+            screenshot_ask: 'Drag to capture a region',
+            run_agent:   'Run Agent Analysis',
+            save_state:  'Save restorable analysis state',
+            load_state:  'Load Analysis State',
+            load_from_cache: 'Load from Cache',
+            load_from_file:  'Load from File',
+            detected_history_results: 'Detected {0} historical analysis results. Choose loading method:',
+            option_load_selected: 'Load Selected History',
+            option_rerun_all: 'Re-analyze All',
+            option_load_json: 'Load from Local JSON File',
+            select_all: 'Select All',
+            deselect_all: 'Deselect All',
+            confirm_load: 'Confirm Load',
+            invalid_json_format: 'Invalid JSON file format',
+            json_load_success: 'Successfully loaded from JSON file',
+            screenshot_export: 'Left: Quick Screenshot | Right: HD Screenshot',
+            export_image:    'Export Image',
+            browse_mode_hint:'Browse mode - press S to enter selection mode',
+            clear_chat:  'Clear Chat',
+            upload_to_start: 'Upload a WSI file to begin analysis',
+            try_demo:    'Try Demo Data',
+            demo_hint:   'TCGA public demo slide · No upload needed',
+            loading_demo:'Loading demo data...',
+            specimen_site_title: 'Confirm the sampling site',
+            specimen_site_body: 'Uploaded slides have no trusted organ metadata. Please enter the sampling site, or choose Unknown. The model must not guess the organ from a low-power overview.',
+            specimen_site_label: 'Sampling site',
+            specimen_site_placeholder: 'e.g. uterus, breast, lung',
+            specimen_site_hint: 'If you do not know, choose Unknown. This is used only as specimen source, not as a diagnosis.',
+            specimen_site_later: 'Later',
+            specimen_site_unknown: 'Unknown',
+            specimen_site_confirm: 'Confirm',
+            specimen_site_missing: 'Site not set',
+            specimen_site_unknown_short: 'Site unknown',
+            // Chat
+            roi_selected: 'ROI Selected',
+            screenshot_taken: 'Region Captured',
+            del_screenshot: 'Delete screenshot',
+            chat_placeholder: "Describe what you want to analyze, or send 'Analyze selected region'...",
+            qa_morphology: 'Morphology',
+            qa_pathology:  'Pathology',
+            qa_diagnosis:  'Diagnosis',
+            // Agent tab
+            decision_trace: 'Decision Trace',
+            clear_trace:  'Clear Trace',
+            start_agent_hint: 'Start Agent to begin analysis',
+            // Reasoning tab
+            multiscale_path: 'Multi-scale Evidence Analysis Path',
+            legend_10x:  '10× Macro',
+            legend_40x:  '40× Lesion',
+            legend_160x: '160× Cell',
+            legend_level1: 'Level 1 · 10× Macro',
+            legend_level2: 'Level 2 · 40× Lesion',
+            legend_level3: 'Level 3 · 160× Cell',
+            tree_hint:   'Analysis path tree will appear after Agent runs',
+            node_details: 'Node Details',
+            // Mode selection
+            mode_select_title: 'Select Analysis Mode',
+            mode_select_sub:   'Choose the analysis mode you\'d like to use',
+            mode_auto:         'Auto Mode',
+            mode_auto_desc:    'Fully automated analysis — AI autonomously selects regions and performs analysis without human intervention.',
+            mode_collab:       'Collaborative Mode',
+            mode_collab_desc:  'Multi-stage step-by-step analysis — each stage shows AI reasoning and plans, letting you decide whether to proceed or modify.',
+            // Dynamic UI strings (set via JS)
+            need_load_wsi:     'Please load a WSI file first',
+            processing:        'Processing...',
+            prepare_upload:    'Preparing upload',
+            wait_upload:       'Waiting to upload...',
+            uploading_status:  'Uploading',
+            upload_done_analyzing: 'Upload complete, analyzing',
+            all_uploaded_analyzing: 'All files uploaded, analysis continuing...',
+            pending_analysis:  'Pending analysis',
+            upload_done_start: 'Upload complete. Ask the patient-level question in chat.',
+            partial_upload_failed: 'Partial upload failed',
+            prepare_upload_dots: 'Preparing upload...',
+            no_files_to_analyze: 'No files to analyze',
+            analyzing_uploading: 'Analyzing (upload continuing)',
+            analyzing:         'Analyzing',
+            launch_analysis:   'Launching analysis...',
+            analysis_in_progress: 'Analysis in progress...',
+            collab_mode_label: 'Human-AI Collaborative',
+            auto_mode_label:   'Pure AI Auto Analysis',
+            collab_mode_tag:   'Collaborative Mode',
+            auto_mode_tag:     'Auto Mode',
+            collab_confirm_hint: 'Each slide\'s analysis stages will wait for your confirmation before continuing. After every slide, the patient-level report is reviewed once more.',
+            pl_collab_staged_hint: 'Collaborative Agent Swarm reuses the single-WSI stage gates on each slide. After every slide is confirmed, the patient-level summary is reviewed separately.',
+            pl_collab_final_hint: 'Collaborative Agent Swarm runs intermediate stages automatically and reviews once before each slide report. After every slide, the patient-level summary is reviewed separately.',
+            auto_hint_early:   'Analyzing uploaded slides first, remaining files uploading in background...',
+            auto_hint:         'Analyzing slides one by one, please wait...',
+            auto_hint_parallel: 'Analyzing independent slides in parallel. Open a slide on the left to see its map.',
+            loading_wsi:       'Loading WSI file...',
+            slide_loaded:      'Slide loaded',
+            analysis_loaded_cache: 'Analysis complete (loaded from cache)',
+            cache_confirm:     'Click OK to load cache, Cancel to re-analyze',
+            observation_analyzing: 'Analyzing...',
+            // pathchat-agent.js strings
+            current_slide:     'Current Slide',
+            init_workstation:  'Initializing workstation...',
+            init_analysis:     'Initializing analysis...',
+            prepare_analysis:  'Preparing analysis...',
+            status_completed:  'Completed',
+            status_in_progress:'In Progress',
+            status_pending_confirm: 'Pending',
+            status_no_region:  'No Region',
+            status_processed:  'Processed',
+            btn_accept:        'Accept',
+            btn_add:           'Add',
+            btn_delete:        'Delete',
+            btn_confirm_adjust:'Confirm Adjustment',
+            btn_cancel:        'Cancel',
+            btn_done_adding:   'Done Adding',
+            btn_done_deleting: 'Done Deleting',
+            title_accept_ai:   'Accept AI Selection',
+            title_add_box:     'Click map to add box',
+            title_delete_box:  'Click map to delete box',
+            adjust_hint:       '📝 Please adjust selection on map, then click "Confirm Adjustment"',
+            cancelled:         'Cancelled',
+            cancel_adjust:     'Adjustment cancelled',
+            green_box:         'green box',
+            blue_box:          'blue box',
+            red_box:           'red box',
+            green_box_done:    'Green Box Selection Complete',
+            blue_box_done:     'Blue Box Selection Complete',
+            add_frame_hint:    (parent, frame) => `➕ Click within ${parent} area to add ${frame}, then click "Done Adding"`,
+            delete_frame_hint: (frame) => `🗑️ Click ${frame} to delete it, then click "Done Deleting"`,
+            // ── Confirmation bar (collaborative) ──
+            bar_accept:            'Accept',
+            bar_accept_title:      'Accept AI selection and continue',
+            bar_override:          'Adjusted',
+            bar_override_title:    'Use current adjusted selection',
+            bar_skip:              'Skip',
+            bar_skip_title:        'Skip this region',
+            bar_auto:              'Switch to Auto',
+            bar_auto_title:        'Switch to full auto mode',
+            manual_mode_hint:      'Manual mode: drag to draw selection on viewer',
+            manual_count_init:     'Selected: 0',
+            bar_done:              'Done',
+            // ── Confirm modal (collaborative) ──
+            modal_close_title:     'Close (accept by default)',
+            modal_ai_analysis:     'AI Analysis',
+            modal_proposal:        'Selection Proposal',
+            modal_preview:         'Region Preview',
+            modal_kbd_hint:        'Press ESC to close & accept | Enter to accept',
+            modal_skip_title:      'Skip this region',
+            modal_edit:            'Manual Adjust',
+            modal_edit_title:      'Manually adjust selection',
+            modal_accept_title:    'Accept AI suggestion',
+            modal_blue_title:      '40× Lesion Region Selection',
+            modal_blue_thinking:   'Based on 10× macro view analysis, AI identified regions with potential pathological changes, recommending further observation at 40×.',
+            modal_green_title:     '160× Cell-level Analysis',
+            modal_green_thinking:  'Abnormal areas found in 40× view, requiring detailed cell-level observation and analysis at 160×.',
+            modal_report_title:    'Pathology Report Confirmation',
+            modal_report_thinking: 'Combining multi-scale analysis results, AI has generated a draft pathology report for your review.',
+            draft_report_kicker:   'HAFL sign-off',
+            draft_report_title:    'Draft report below. Do you agree to finalize?',
+            draft_report_editor:   'Draft body (edit in place)',
+            draft_report_findings: 'Quote a finding and exclude it',
+            draft_report_feedback: 'Feedback / correction',
+            draft_report_feedback_ph: 'e.g. This focus is not tumor; revise the conclusion…',
+            draft_report_hint:     'Agreeing to finalize is the only sign-off. Chat or add ROIs first, then regenerate from that conversation.',
+            draft_report_cite_hint: 'Click an ROI id such as [R8] to map the slide and show “Quoted here” above the chat box.',
+            draft_report_chat_hint: 'Write corrections in the box below. Send to keep chatting; click Regenerate report to rewrite the draft from this conversation.',
+            draft_report_chat_ph:  'Keep chatting or select a region… Send first, then click Regenerate report above.',
+            draft_report_refs:     'References',
+            draft_report_edit:     'Edit draft',
+            draft_report_preview:  'Preview citations',
+            draft_report_exclude:  'Exclude selected findings',
+            draft_report_revise:   'Revise from feedback',
+            draft_report_add_roi:  'Analyze selected ROI',
+            draft_report_regenerate: 'Regenerate report',
+            draft_report_finalize: 'Agree and finalize',
+            draft_report_open:     'Show draft in chat',
+            draft_report_no_finding: 'Select at least one finding to exclude.',
+            draft_report_need_feedback: 'Enter the pathologist feedback first.',
+            draft_report_need_roi: 'Click the slide to place a new ROI, or right-click to drag-capture.',
+            draft_report_revising: 'Revising the draft…',
+            // ── Collaborative mode ──
+            collab_workstation:     'To-Do List (Workstation)',
+            phase_report_done:      'Draft report is ready in the chat. Click an ROI id to inspect it; agree to finalize to sign off.',
+            phase_regions_found:    (n) => `${n} candidate region(s) identified. See left panel for details.`,
+            phase_analysis_done:    'Analysis complete. See left panel for details.',
+            phase_review_hint:      '⏳ Draft report is in the chat. Keep talking or add ROIs, then regenerate, or agree to finalize.',
+            btn_confirm_report:     'Agree and finalize',
+            btn_modify_report:      'Edit draft',
+            phase_analysis_complete:'Analysis Complete',
+            phase_continue_next:    'Continue to the next phase?',
+            btn_execute:            'Execute',
+            btn_modify:             'Modify',
+            generating_html_report: 'Generating HTML report, please wait...',
+            status_completed_collab: 'Completed',
+            status_waiting_confirm: 'Waiting for confirmation',
+            status_processing: 'Processing',
+            cache_too_old:     'Cache version is too old, please re-run analysis and save',
+            agent_done:        'Agent analysis complete',
+            analysis_stopped:  'Analysis stopped',
+            findings_title:    'Pathological Findings',
+            region_preview:    'Region Preview',
+            child_stats:       'Child Nodes',
+            child_count:       (n) => `Contains ${n} sub-regions`,
+            node_id_label:     'Node ID',
+            magnification_label: 'Magnification',
+            region_size_label: 'Region Size',
+            position_label:    'Position',
+            level_red:         'Low-power (10×)',
+            level_blue:        'Medium-power (40×)',
+            level_green:       'High-power (160×)',
+            level_unknown:     'Unknown',
+            // tree-visualization.js
+            tree_analyzing:    'Analysis in progress...',
+            tree_empty_hint:   'Analysis path tree will appear after Agent starts',
+            // pathchat.js — tree detail panel
+            type_malignant:    'Malignant',
+            type_benign:       'Benign',
+            type_uncertain:    'Uncertain',
+            img_load_fail:     'Image load failed',
+            img_loading:       'Loading...',
+            img_not_found:     'Image not found',
+            no_data:           'No data available',
+            section_reasoning: 'Observation & Reasoning',
+            section_plan:      'Decision',
+            section_features:  'Features',
+            section_global_obs:'Global Observation',
+            section_plan_decision: 'Selection Decision',
+            section_stats:     'Analysis Statistics',
+            label_action:      'Action',
+            label_drill_down:  'Drill down',
+            label_selected_red:'Selected Red Boxes',
+            label_total:       'Total',
+            label_regions:     'regions',
+            label_thumbnail:   'Thumbnail',
+            label_panorama:    'Panorama',
+            label_panorama_thumb: 'Panorama thumbnail',
+            stat_red_box:      'Red Boxes (10×)',
+            stat_blue_box:     'Blue Boxes (40×)',
+            stat_green_box:    'Green Boxes (160×)',
+            stat_unit:         '',
+            stat_overall:      'Overall Statistics',
+            stat_slides:       'Slides',
+            stat_patient:      'Patient',
+            stat_diag_report:  'Patient Level Diagnostic Report',
+            stat_diag_report_short: 'Diagnostic Report',
+            // pathchat-agent.js — tree modal & route tree
+            tree_modal_title:  'Analysis Tree Structure',
+            tree_modal_sub:    'Multi-scale pathology analysis path visualization',
+            btn_close:         'Close',
+            status_confirmed:  'Confirmed',
+            status_modified:   'Modified',
+            status_skipped:    'Skipped',
+            status_wait_confirm: 'Waiting for confirmation',
+            report_title:      'Diagnostic Report Summary',
+            report_generated:  'Diagnostic report has been generated, see details in left panel.',
+            report_approved:   'Report approved, analysis workflow complete!',
+            pathology_report:  'Pathology Diagnostic Report',
+            confidence_label:  'Confidence',
+            metrics_label:     'Metrics',
+            slide_info:        'Slide Info',
+            label_filename:    'Filename',
+            label_part:        'Part',
+            tree_hierarchy:    'Hierarchy',
+            tree_visual:       'Visual Tree',
+            mag_low:           'Low-power view',
+            mag_mid:           'Mid-power view',
+            mag_high:          'High-power view',
+            mag_ultra:         'High-power view',
+            stat_layers:       'layers',
+            btn_view_report:   'View HTML Report',
+            // pathchat-agent.js — Phase card rendering
+            phase_name_1:      'Whole-slide thumbnail',
+            phase_name_2:      'Red Box Analysis (10×)',
+            phase_name_3:      'Blue Box Analysis (40×)',
+            phase_name_4:      'Green Box Analysis (160×)',
+            phase_name_5:      'Diagnostic Report Summary',
+            ai_global_analysis:'AI Global Analysis',
+            selected_regions:  'Selected Regions',
+            sub_region_count:  (n) => `${n} sub-region(s)`,
+            diagnostic_report: 'Diagnostic Report',
+            parent_region:     (id) => `Parent: ${id}`,
+            ai_loading:        '(AI analysis loading...)',
+            status_pending:    'Pending',
+            green_box_confirmed: 'Green box confirmed',
+            // ── Patient Level modal & progress ──
+            pl_modal_title:        'Multiple Slide Files Detected',
+            pl_modal_message:      (n) => `You selected <strong>${n}</strong> WSI files, which may be from different sites of the same patient.`,
+            pl_option_patient:     'Patient Level Analysis',
+            pl_option_patient_desc:'Analyze all slides and auto-generate a patient-level comprehensive diagnostic report',
+            pl_option_single:      'Upload Individually',
+            pl_option_single_desc: 'Upload files one by one, manually select each slide for individual analysis',
+            pl_recommended:        'Recommended',
+            pl_confirm_choice:     'Confirm',
+            pl_progress_title:     'Patient Level Analysis in Progress',
+            pl_patient_folder:     'Patient Folder: --',
+            pl_slide_count:        'Slides: 0/0',
+            pl_case_kicker:        'Patient case',
+            pl_stop_short:         'Stop',
+            prepare_analysis:      'Preparing analysis...',
+            pl_slide_list:         'Slide List',
+            pl_all_cache_loaded:   'All cache loaded',
+            pl_analyzing:          'Analyzing',
+            pl_completed:          'Completed',
+            pl_start_analysis:     'Start Analysis',
+            pl_reanalyze:          'Re-analyze',
+            pl_file_reused:        (reused, newUp) => `${reused} file(s) reused from server` + (newUp > 0 ? `, ${newUp} newly uploaded` : ''),
+            pl_all_uploaded:       (n) => `All ${n} files are ready. Ask the patient-level question in chat.`,
+            pl_partial_fail:       (ok, total) => `Partial upload failed, ${ok}/${total} uploaded`,
+            pl_ready_count:        (ready, total) => `Start Analysis (${ready}/${total} ready)`,
+            pl_first_ready:        'First file ready, you can start analysis now',
+            pl_patient_label:      (name) => `Patient: ${name}`,
+            pl_slide_label:        (n) => `Slides: ${n}`,
+            pl_folder_label:       'Patient Folder',
+            pl_slide_count_label:  'Slide Count',
+            pl_wsi_suffix:         'WSI',
+            pl_early_start:        (ok, total) => ` (${ok}/${total} uploaded)`,
+            pl_upload_status:      (i, total) => `Uploaded ${i}/${total}`,
+            pl_reuse_upload_status:(reused, uploading) => `Reused ${reused} + Uploaded ${uploading}`,
+            pl_no_slides_info:     'No uploaded slide information found',
+            pl_analysis_running:   'Analyzing...',
+            pl_completed_cache:    'Completed (from cache)',
+            pl_analysis_complete_tag: 'Analysis Complete',
+            pl_loaded_slides:      (n) => `Loaded analysis results for ${n} slide(s)`,
+            pl_analysis_started:   'Patient Level Analysis Started',
+            pl_mode_label:         'Mode',
+            pl_schedule_title:     'Slide scheduling',
+            pl_schedule_parallel:  'Parallel',
+            pl_schedule_serial:    'Serial',
+            pl_schedule_label:     'Scheduling',
+            pl_schedule_group_label: 'Patient slide scheduling',
+            pl_schedule_description_parallel: 'Analyze independent slides together to shorten total waiting time.',
+            pl_schedule_description_serial: 'Analyze one slide at a time for predictable memory and model usage.',
+            pl_parallel_sync_hint: 'I will analyze these slides in parallel. Thumbnail interpretations and Subagent details stay in the middle panel — click a slide on the left to review that slide.',
+            pl_serial_nav_hint: 'Slides are analyzed one after another. Click a slide on the left to view a completed or in-progress slide.',
+            pl_slide_report_nav: 'Slides',
+            pl_slide_report_nav_count: (done, total) => `${done}/${total} finalized`,
+            pl_slide_report_nav_running: (n) => `${n} running`,
+            pl_slide_report_state_pending: 'Pending',
+            pl_slide_report_state_analyzing: 'Running',
+            pl_slide_report_state_review: 'Needs confirm',
+            pl_slide_report_state_revising: 'Revising',
+            pl_slide_report_state_final: 'Finalized',
+            pl_slide_report_state_error: 'Failed',
+            pl_slide_report_composite: 'Patient report',
+            pl_failed_start:       'Failed to start analysis',
+            pl_retry:              'Retry',
+            settings_default_notice: 'PathCopilot defaults to <code>gemini-3.1-pro-preview</code>. You can customize the model below.',
+            settings_language_title: 'Interface language',
+            settings_language_subtitle: 'Changes apply immediately and are saved on this device.',
+            settings_back_workspace: 'Back to workspace',
+            settings_search_placeholder: 'Search settings',
+            settings_personal: 'Personal',
+            settings_nav_language: 'Language',
+            settings_nav_appearance: 'Appearance',
+            settings_nav_model: 'AI model',
+            settings_nav_account: 'Account',
+            settings_nav_usage: 'Usage',
+            settings_language_label: 'Display language',
+            settings_language_note: 'Choose the language used throughout PathCopilot.',
+            settings_appearance_title: 'Appearance',
+            settings_appearance_subtitle: 'Personalize the workspace and ROI colors.',
+            settings_model_title: 'AI model',
+            settings_model_subtitle: 'Connect an OpenAI-compatible provider before chatting or analyzing slides.',
+            settings_api_required_title: 'Connect an AI model',
+            settings_api_required_body: 'Add an OpenAI-compatible endpoint, model, and API key before chatting or analyzing slides.',
+            settings_api_required_later: 'Later',
+            settings_api_required_action: 'Open Settings',
+            settings_workspace_theme: 'Workspace color',
+            settings_theme_light: 'Gray white',
+            settings_theme_light_note: 'Optional neutral gray-white',
+            settings_theme_warm: 'Warm',
+            settings_theme_warm_note: 'Default soft ivory workspace',
+            settings_theme_contrast: 'High contrast',
+            settings_theme_contrast_note: 'Sharper visual separation',
+            settings_account_title: 'Account',
+            settings_account_subtitle: 'Manage the account used for this workspace.',
+            settings_account_active: 'Active',
+            settings_switch_account: 'Switch account',
+            settings_sign_out: 'Sign out',
+            settings_usage_title: 'Usage',
+            settings_usage_subtitle: "Today's PathCopilot activity.",
+            settings_usage_chat: 'Conversations',
+            settings_usage_wsi: 'WSI analyses',
+            settings_usage_loading: 'Loading usage…',
+            settings_usage_unlimited: 'No daily limit',
+            settings_usage_of: (used, limit) => `${used} of ${limit} used today`,
+            settings_no_results: 'No matching settings',
+            settings_roi_palette_title: 'ROI colors',
+            settings_roi_palette_subtitle: 'Choose a palette for the three ROI levels. Changes are previewed immediately.',
+            settings_local_display: 'Display setting',
+            settings_palette_classic: 'Classic',
+            settings_palette_classic_note: 'Original colors',
+            settings_palette_colorblind: 'Color-vision friendly',
+            settings_recommended: 'Recommended',
+            settings_palette_soft: 'Soft accessible',
+            settings_palette_soft_note: 'Lower visual intensity',
+            settings_palette_contrast: 'High contrast',
+            settings_palette_contrast_note: 'For low-contrast displays',
+            settings_palette_custom: 'Custom',
+            settings_palette_custom_note: 'Choose each level',
+            settings_roi_accessibility_note: 'ROI levels are identified by Level 1–3 text labels as well as color.',
+            stg_title:          'Settings',
+            stg_section:        'LLM Configuration',
+            stg_openai_compatible: 'OpenAI-compatible API',
+            stg_api_url:        'API endpoint',
+            stg_api_url_placeholder: 'https://provider.example/v1/chat/completions',
+            stg_api_url_hint:   'Enter the complete OpenAI-compatible chat-completions URL. Custom endpoints require a key from the same provider.',
+            stg_get_keys:       'Get API Keys <i class="fas fa-external-link-alt"></i>',
+            stg_model_name:     'Model',
+            stg_model_placeholder: 'e.g. gpt-5.4',
+            stg_model_hint:     'Use the exact model identifier exposed by your provider.',
+            stg_browse_models:  'Browse models at <a href="https://openrouter.ai/models" target="_blank">openrouter.ai/models</a>',
+            stg_api_keys:       'API Keys',
+            stg_add_key:        'Add API Key',
+            stg_multi_key_hint: 'Paste multiple keys at once (one per line), or add them individually.',
+            stg_test:           'Test Connection',
+            stg_testing:        'Testing…',
+            stg_diagnostic_title: 'Connection diagnostic',
+            stg_cancel:         'Cancel',
+            stg_save:           'Save Settings',
+        },
+        zh: {
+            panel_files: '文件管理',
+            upload_drag: '拖拽WSI文件到此处',
+            upload_or:   '或点击选择文件',
+            upload_fmt:  '支持 .svs, .ndpi, .tiff 等格式',
+            uploading:   '上传中...',
+            uploaded_files: '已上传文件',
+            refresh_list:'刷新文件列表',
+            no_files:    '暂无上传文件',
+            back_to_files: '返回文件管理',
+            slide_list:  '切片列表',
+            comprehensive_report: '综合诊断报告',
+            download_word: '下载 Word 报告',
+            rerun_orchestrator: '重新汇总',
+            rerun_wsi: '重新分析',
+            rerun_orchestrator_title: '重新生成综合诊断报告',
+            rerun_orchestrator_hint: '可选：为重新生成添加与当前问题相关的补充指令',
+            rerun_orchestrator_running: '正在重新汇总...',
+            rerun_orchestrator_success: '汇总报告已重新生成',
+            rerun_wsi_confirm: '确定重新分析该切片？',
+            rerun_wsi_running: '正在重新分析切片...',
+            start_analysis: '开始分析',
+            preparing:   '准备开始分析...',
+            zoom_in:     '放大',
+            zoom_out:    '缩小',
+            reset_view:  '重置视图',
+            fullscreen:  '全屏',
+            analysis_tree: '分析路径树',
+            screenshot_ask: '拖拽截取提问',
+            run_agent:   '启动Agent分析',
+            save_state:  '保存当前可恢复状态',
+            load_state:  '加载分析结果',
+            load_from_cache: '从缓存加载',
+            load_from_file:  '从文件加载',
+            detected_history_results: '检测到 {0} 个历史分析结果，请选择加载方式：',
+            option_load_selected: '加载指定的历史结果',
+            option_rerun_all: '全部重新分析',
+            option_load_json: '从本地 JSON 文件加载',
+            select_all: '全选',
+            deselect_all: '取消全选',
+            confirm_load: '确认加载',
+            invalid_json_format: 'JSON 文件格式无效',
+            json_load_success: '已成功从 JSON 文件加载',
+            screenshot_export: '左键: 快速截图 | 右键: 高清截图(原始分辨率)',
+            export_image:    '导出图片',
+            browse_mode_hint:'浏览模式 - 按 S 键进入选择模式',
+            clear_chat:  '清空对话',
+            upload_to_start: '请上传WSI文件开始分析',
+            try_demo:    '试用 Demo 数据',
+            demo_hint:   'TCGA 公开演示切片 · 无需上传',
+            loading_demo:'正在加载 Demo 数据...',
+            specimen_site_title: '请确认取材部位',
+            specimen_site_body: '自己上传的切片没有服务器可信的器官信息。请填写取材部位，或选择暂不清楚。模型不得从低倍缩略图猜测器官。',
+            specimen_site_label: '取材部位',
+            specimen_site_placeholder: '例如：子宫、乳腺、肺',
+            specimen_site_hint: '不知道也可以选「暂不清楚」。该信息只作为取材来源，不是诊断。',
+            specimen_site_later: '稍后填写',
+            specimen_site_unknown: '暂不清楚',
+            specimen_site_confirm: '确认',
+            specimen_site_missing: '未填取材',
+            specimen_site_unknown_short: '取材不明',
+            roi_selected: '已选择ROI区域',
+            screenshot_taken: '已截取区域',
+            del_screenshot: '删除截图',
+            chat_placeholder: "请描述您想要分析的问题，或直接发送'分析选中区域'...",
+            qa_morphology: '形态分析',
+            qa_pathology:  '病变识别',
+            qa_diagnosis:  '诊断建议',
+            decision_trace: '决策轨迹',
+            clear_trace:  '清空轨迹',
+            start_agent_hint: '启动Agent开始分析',
+            multiscale_path: '多尺度循证分析路径',
+            legend_10x:  '10× 宏观结构',
+            legend_40x:  '40× 病灶特征',
+            legend_160x: '160× 细胞证据',
+            legend_level1: 'Level 1 · 10× 宏观结构',
+            legend_level2: 'Level 2 · 40× 病灶特征',
+            legend_level3: 'Level 3 · 160× 细胞证据',
+            tree_hint:   '启动Agent后将显示分析路径树',
+            node_details: '节点详情',
+            mode_select_title: '选择分析模式',
+            mode_select_sub:   '请选择您希望使用的分析模式',
+            mode_auto:         '自动模式',
+            mode_auto_desc:    '全自动托管分析，AI自主完成所有区域选择和分析，无需人工干预。',
+            mode_collab:       '协作模式',
+            mode_collab_desc:  '多阶段分步分析，每阶段展示 AI 的推理和计划，由您决定是否执行或修改。',
+            // Dynamic UI strings (set via JS)
+            need_load_wsi:     '请先加载WSI文件',
+            processing:        '处理中...',
+            prepare_upload:    '准备上传',
+            wait_upload:       '等待上传...',
+            uploading_status:  '上传中',
+            upload_done_analyzing: '上传完成，分析中',
+            all_uploaded_analyzing: '所有文件已上传，分析继续中...',
+            pending_analysis:  '待分析',
+            upload_done_start: '上传完成，请在右侧聊天提出本次患者级问题',
+            partial_upload_failed: '部分上传失败',
+            prepare_upload_dots: '准备上传...',
+            no_files_to_analyze: '没有可分析的文件',
+            analyzing_uploading: '分析中（上传继续）',
+            analyzing:         '分析中',
+            launch_analysis:   '启动分析...',
+            analysis_in_progress: '分析进行中...',
+            collab_mode_label: '人机协作模式',
+            auto_mode_label:   '纯AI自动分析',
+            collab_mode_tag:   '协作模式',
+            auto_mode_tag:     '自动模式',
+            collab_confirm_hint: '每张切片的每个分析阶段都将等待您的确认后再继续。全部切片完成后，还会再审阅患者级综合报告。',
+            pl_collab_staged_hint: '协作模式下 Agent Swarm 每张切片复用单张 WSI 的分阶段审阅；全部完成后还会审阅患者级综合报告。',
+            pl_collab_final_hint: '协作终末审阅：每张切片的中间阶段自动完成，仅在该片终报前审阅一次；全部完成后还会审阅患者级综合报告。',
+            auto_hint_early:   '先分析已上传的切片，其余文件在后台继续上传...',
+            auto_hint:         '正在逐个分析各切片，请稍候...',
+            auto_hint_parallel: '正在并行分析相互独立的切片。请在左侧点开一张查看其中间栏 map。',
+            loading_wsi:       '正在加载WSI文件...',
+            slide_loaded:      '已加载切片',
+            analysis_loaded_cache: '分析已完成（从缓存加载）',
+            cache_confirm:     '点击"确定"加载缓存，点击"取消"重新分析',
+            observation_analyzing: '分析中...',
+            // pathchat-agent.js strings
+            current_slide:     '当前切片',
+            init_workstation:  '正在初始化工作站...',
+            init_analysis:     '正在初始化分析...',
+            prepare_analysis:  '准备开始分析...',
+            status_completed:  '完成',
+            status_in_progress:'进行中',
+            status_pending_confirm: '待确认',
+            status_no_region:  '无区域',
+            status_processed:  '已处理',
+            btn_accept:        '接受',
+            btn_add:           '增加',
+            btn_delete:        '删除',
+            btn_confirm_adjust:'确认调整',
+            btn_cancel:        '取消',
+            btn_done_adding:   '完成增加',
+            btn_done_deleting: '完成删除',
+            title_accept_ai:   '接受AI选择',
+            title_add_box:     '点击地图添加框',
+            title_delete_box:  '点击地图删除框',
+            adjust_hint:       '📝 请在地图上调整选区，完成后点击"确认调整"',
+            cancelled:         '已取消',
+            cancel_adjust:     '已取消调整',
+            green_box:         '绿框',
+            blue_box:          '蓝框',
+            red_box:           '红框',
+            green_box_done:    '绿框框选完成',
+            blue_box_done:     '蓝框框选完成',
+            add_frame_hint:    (parent, frame) => `➕ 点击${parent}区域内的位置添加${frame}，完成后点击"完成增加"`,
+            delete_frame_hint: (frame) => `🗑️ 点击${frame}来删除它，完成后点击"完成删除"`,
+            // ── 确认栏（协作模式） ──
+            bar_accept:            '接受',
+            bar_accept_title:      '接受AI的选择，继续分析',
+            bar_override:          '已调整',
+            bar_override_title:    '使用当前调整后的选择',
+            bar_skip:              '跳过',
+            bar_skip_title:        '跳过该区域，不分析',
+            bar_auto:              '改为全自动',
+            bar_auto_title:        '切换为全自动模式，后续不再询问',
+            manual_mode_hint:      '手动模式：在视图中拖拽绘制选区',
+            manual_count_init:     '已选: 0个',
+            bar_done:              '完成选择',
+            // ── 确认对话框（协作模式） ──
+            modal_close_title:     '关闭（默认接受）',
+            modal_ai_analysis:     'AI 分析',
+            modal_proposal:        '选取建议',
+            modal_preview:         '区域预览',
+            modal_kbd_hint:        '按 ESC 关闭并接受 | Enter 接受',
+            modal_skip_title:      '跳过此区域，不进行分析',
+            modal_edit:            '手动调整',
+            modal_edit_title:      '手动调整选区后确认',
+            modal_accept_title:    '接受AI的建议',
+            modal_blue_title:      '40× 病灶区域选择',
+            modal_blue_thinking:   '基于10×宏观视图的分析，AI识别出可能存在病理改变的区域，建议在40倍镜下进一步观察。',
+            modal_green_title:     '160× 细胞级别分析',
+            modal_green_thinking:  '在40×视野中发现异常区域，需要在160倍镜下进行细胞级别的详细观察和分析。',
+            modal_report_title:    '病理报告确认',
+            modal_report_thinking: '综合多尺度分析结果，AI已生成病理报告初稿，请确认或修改。',
+            draft_report_kicker:   'HAFL 定稿审阅',
+            draft_report_title:    '拟报告如下，请问是否同意定稿？',
+            draft_report_editor:   '拟报告正文（可直接改动）',
+            draft_report_findings: '引用 Finding 并拒绝',
+            draft_report_feedback: '反馈或纠正意见',
+            draft_report_feedback_ph: '例如：该区域并非肿瘤，请据此修订结论……',
+            draft_report_hint:     '只有点同意定稿才会签发。可先在聊天中补充意见或点选新区域，再点重新生成报告。',
+            draft_report_cite_hint: '点击文中 [R8] 这类编号会定位切片，并在输入框上方显示「已引用此处」。',
+            draft_report_chat_hint: '纠正意见请写在下方输入框。发送可继续沟通；点「重新生成报告」才会按这段对话改拟报。',
+            draft_report_chat_ph:  '继续沟通或点选区域… 发送后可点上方「重新生成报告」',
+            draft_report_refs:     '参考文献',
+            draft_report_edit:     '编辑正文',
+            draft_report_preview:  '预览引用',
+            draft_report_exclude:  '拒绝所选 Finding',
+            draft_report_revise:   '按反馈修订',
+            draft_report_add_roi:  '分析新增 ROI',
+            draft_report_regenerate: '重新生成报告',
+            draft_report_finalize: '同意定稿',
+            draft_report_open:     '在聊天中查看拟报告',
+            draft_report_no_finding: '请先勾选要拒绝的 Finding。',
+            draft_report_need_feedback: '请先填写病理医生反馈。',
+            draft_report_need_roi: '请先在切片上点击放置新增 ROI，或右键选择拖拽截取。',
+            draft_report_revising: '正在修订拟报告…',
+            // ── 协作模式 ──
+            collab_workstation:     '待办任务清单 (Workstation)',
+            phase_report_done:      '拟报告已生成在右侧聊天中。点击 ROI 编号可复核对应区域；同意定稿才会签发。',
+            phase_regions_found:    (n) => `已识别 ${n} 个候选区域，详细结果请查看左侧面板。`,
+            phase_analysis_done:    '分析完成，请查看左侧面板的详细结果。',
+            phase_review_hint:      '⏳ 拟报告已显示在聊天中。可继续沟通或点选新区域，再重新生成报告，或直接同意定稿。',
+            btn_confirm_report:     '同意定稿',
+            btn_modify_report:      '编辑拟报告',
+            phase_analysis_complete:'分析完成',
+            phase_continue_next:    '是否继续下一阶段？',
+            btn_execute:            '执行',
+            btn_modify:             '修改',
+            generating_html_report: '正在生成 HTML 报告，请稍候...',
+            status_completed_collab: '已完成',
+            status_waiting_confirm: '等待确认',
+            status_processing: '处理中',
+            cache_too_old:     '缓存版本过旧，请重新运行分析并保存',
+            agent_done:        'Agent分析完成',
+            analysis_stopped:  '分析已停止',
+            findings_title:    '病理学发现',
+            region_preview:    '区域预览',
+            child_stats:       '子节点统计',
+            child_count:       (n) => `包含 ${n} 个子区域`,
+            node_id_label:     '节点ID',
+            magnification_label: '放大倍数',
+            region_size_label: '区域大小',
+            position_label:    '位置',
+            level_red:         '低倍镜 (10×)',
+            level_blue:        '中倍镜 (40×)',
+            level_green:       '高倍镜 (160×)',
+            level_unknown:     '未知',
+            // tree-visualization.js
+            tree_analyzing:    '分析进行中...',
+            tree_empty_hint:   '启动Agent后将显示分析路径树',
+            // pathchat.js — tree detail panel
+            type_malignant:    '恶性',
+            type_benign:       '良性',
+            type_uncertain:    '待定',
+            img_load_fail:     '图片加载失败',
+            img_loading:       '加载中...',
+            img_not_found:     '未找到图片',
+            no_data:           '暂无数据',
+            section_reasoning: '观察推理',
+            section_plan:      '决策',
+            section_features:  '特征',
+            section_global_obs:'全局观察',
+            section_plan_decision: '选择决策',
+            section_stats:     '分析统计',
+            label_action:      '选择动作',
+            label_drill_down:  '下钻放大',
+            label_selected_red:'选中红框',
+            label_total:       '共计',
+            label_regions:     '个区域',
+            label_thumbnail:   '缩略图',
+            label_panorama:    '全景',
+            label_panorama_thumb: '全景缩略图',
+            stat_red_box:      '红框 (10×)',
+            stat_blue_box:     '蓝框 (40×)',
+            stat_green_box:    '绿框 (160×)',
+            stat_unit:         ' 个',
+            stat_overall:      '总体统计',
+            stat_slides:       '切片数',
+            stat_patient:      '患者',
+            stat_diag_report:  'Patient Level 综合诊断报告',
+            stat_diag_report_short: '综合诊断报告',
+            // pathchat-agent.js — tree modal & route tree
+            tree_modal_title:  '分析树结构',
+            tree_modal_sub:    '多尺度病理分析路径可视化',
+            btn_close:         '关闭',
+            status_confirmed:  '已确认',
+            status_modified:   '已修改',
+            status_skipped:    '已跳过',
+            status_wait_confirm: '等待确认',
+            report_title:      '诊断报告汇总',
+            report_generated:  '诊断报告已生成，请在左侧面板查看详情。',
+            report_approved:   '报告审核通过，分析流程已完成！',
+            pathology_report:  '病理诊断报告',
+            confidence_label:  '置信度',
+            metrics_label:     '量化指标',
+            slide_info:        '切片信息',
+            label_filename:    '文件名',
+            label_part:        '部位',
+            tree_hierarchy:    '层级结构',
+            tree_visual:       '可视化树图',
+            mag_low:           '低倍镜视野',
+            mag_mid:           '中倍镜视野',
+            mag_high:          '高倍镜视野',
+            mag_ultra:         '超高倍镜视野',
+            stat_layers:       '层',
+            btn_view_report:   '查看HTML报告',
+            // pathchat-agent.js — Phase 卡片渲染
+            phase_name_1:      '全片缩略图',
+            phase_name_2:      '红框分析 (10×)',
+            phase_name_3:      '蓝框分析 (40×)',
+            phase_name_4:      '绿框分析 (160×)',
+            phase_name_5:      '诊断报告汇总',
+            ai_global_analysis:'AI 全局分析',
+            selected_regions:  '选中区域',
+            sub_region_count:  (n) => `共 ${n} 个子区域`,
+            diagnostic_report: '诊断报告',
+            parent_region:     (id) => `父区域${id}`,
+            ai_loading:        '（AI 分析结果加载中...）',
+            status_pending:    '待确认',
+            green_box_confirmed: '绿框已确认',
+            // ── Patient Level modal & progress ──
+            pl_modal_title:        '检测到多个切片文件',
+            pl_modal_message:      (n) => `您一次性选择了 <strong>${n}</strong> 个WSI文件，这些可能来自同一患者的不同部位切片。`,
+            pl_option_patient:     'Patient Level 分析',
+            pl_option_patient_desc:'分析所有切片，自动汇总生成患者级别综合诊断报告',
+            pl_option_single:      '逐个上传',
+            pl_option_single_desc: '依次上传文件，手动选择每张切片进行单独分析',
+            pl_recommended:        '推荐',
+            pl_confirm_choice:     '确认选择',
+            pl_progress_title:     'Patient Level 分析进行中',
+            pl_patient_folder:     '患者文件夹: --',
+            pl_slide_count:        '切片: 0/0',
+            pl_case_kicker:        '患者病例',
+            pl_stop_short:         '停止',
+            prepare_analysis:      '准备分析...',
+            pl_slide_list:         '切片列表',
+            pl_all_cache_loaded:   '全部缓存已加载',
+            pl_analyzing:          '分析中',
+            pl_completed:          '已完成',
+            pl_start_analysis:     '开始分析',
+            pl_reanalyze:          '重新分析',
+            pl_file_reused:        (reused, newUp) => `${reused} 个文件已在服务器中自动复用` + (newUp > 0 ? `，${newUp} 个新文件已上传` : ''),
+            pl_all_uploaded:       (n) => `${n} 个文件全部就绪，请在右侧聊天提出本次患者级问题`,
+            pl_partial_fail:       (ok, total) => `部分文件上传失败，已上传 ${ok}/${total} 个`,
+            pl_ready_count:        (ready, total) => `开始分析 (${ready}/${total} 已就绪)`,
+            pl_first_ready:        '第 1 个文件已就绪，可立即开始分析',
+            pl_patient_label:      (name) => `患者: ${name}`,
+            pl_slide_label:        (n) => `切片: ${n}`,
+            pl_folder_label:       '患者文件夹',
+            pl_slide_count_label:  '切片数量',
+            pl_wsi_suffix:         '张WSI',
+            pl_early_start:        (ok, total) => ` (已上传 ${ok}/${total})`,
+            pl_upload_status:      (i, total) => `已上传 ${i}/${total}`,
+            pl_reuse_upload_status:(reused, uploading) => `已复用 ${reused} 个 + 已上传 ${uploading} 个`,
+            pl_no_slides_info:     '没有找到已上传的切片信息',
+            pl_analysis_running:   '分析中...',
+            pl_completed_cache:    '分析已完成（从缓存加载）',
+            pl_analysis_complete_tag: '分析完成',
+            pl_loaded_slides:      (n) => `已加载 ${n} 张切片的分析结果`,
+            pl_analysis_started:   'Patient Level 分析开始',
+            pl_mode_label:         '分析模式',
+            pl_schedule_title:     '切片调度',
+            pl_schedule_parallel:  '并行',
+            pl_schedule_serial:    '串行',
+            pl_schedule_label:     '调度方式',
+            pl_schedule_group_label: '患者切片调度',
+            pl_schedule_description_parallel: '同时分析相互独立的切片，缩短总体等待时间。',
+            pl_schedule_description_serial: '每次只分析一张切片，资源占用更可预测。',
+            pl_parallel_sync_hint: '我将并行分析这些切片。各切片的缩略图解读和 Subagent 细节只在中间栏展示，请点击左侧对应切片查看。',
+            pl_serial_nav_hint: '当前按顺序逐张分析。可点击左侧切片查看已完成或正在分析的切片。',
+            pl_slide_report_nav: '切片',
+            pl_slide_report_nav_count: (done, total) => `已定稿 ${done}/${total}`,
+            pl_slide_report_nav_running: (n) => `${n} 张分析中`,
+            pl_slide_report_state_pending: '未开始',
+            pl_slide_report_state_analyzing: '分析中',
+            pl_slide_report_state_review: '待确认',
+            pl_slide_report_state_revising: '修订中',
+            pl_slide_report_state_final: '已定稿',
+            pl_slide_report_state_error: '失败',
+            pl_slide_report_composite: '综合报告',
+            pl_failed_start:       '启动分析失败',
+            pl_retry:              '重新开始',
+            settings_default_notice: 'PathCopilot 默认使用 <code>gemini-3.1-pro-preview</code>，您可以通过以下选项自定义模型',
+            settings_language_title: '界面语言',
+            settings_language_subtitle: '切换后立即生效，并保存在本机。',
+            settings_back_workspace: '返回工作台',
+            settings_search_placeholder: '搜索设置',
+            settings_personal: '个人',
+            settings_nav_language: '语言',
+            settings_nav_appearance: '外观',
+            settings_nav_model: 'AI 模型',
+            settings_nav_account: '账户',
+            settings_nav_usage: '用量',
+            settings_language_label: '显示语言',
+            settings_language_note: '选择 PathCopilot 全部界面使用的语言。',
+            settings_appearance_title: '外观',
+            settings_appearance_subtitle: '个性化工作台和 ROI 显示配色。',
+            settings_model_title: 'AI 模型',
+            settings_model_subtitle: '聊天或分析切片前，请先连接 OpenAI 兼容的模型服务。',
+            settings_api_required_title: '连接 AI 模型',
+            settings_api_required_body: '使用聊天或切片分析前，请先填写 OpenAI 兼容接口、模型名称和 API 密钥。',
+            settings_api_required_later: '稍后设置',
+            settings_api_required_action: '前往设置',
+            settings_workspace_theme: '前端配色',
+            settings_theme_light: '灰白',
+            settings_theme_light_note: '可选的中性灰白界面',
+            settings_theme_warm: '暖色',
+            settings_theme_warm_note: '默认的柔和象牙黄工作台',
+            settings_theme_contrast: '高对比度',
+            settings_theme_contrast_note: '更清晰的界面分隔',
+            settings_account_title: '账户',
+            settings_account_subtitle: '管理当前工作台使用的账户。',
+            settings_account_active: '当前账户',
+            settings_switch_account: '切换账户',
+            settings_sign_out: '退出登录',
+            settings_usage_title: '用量',
+            settings_usage_subtitle: '今日 PathCopilot 使用情况。',
+            settings_usage_chat: '对话',
+            settings_usage_wsi: 'WSI 分析',
+            settings_usage_loading: '正在读取用量…',
+            settings_usage_unlimited: '不限制每日用量',
+            settings_usage_of: (used, limit) => `今日已使用 ${used} / ${limit}`,
+            settings_no_results: '没有匹配的设置',
+            settings_roi_palette_title: 'ROI 配色',
+            settings_roi_palette_subtitle: '选择三层 ROI 的显示配色；切换后立即预览并自动保存。',
+            settings_local_display: '显示设置',
+            settings_palette_classic: '经典配色',
+            settings_palette_classic_note: '保留原始配色',
+            settings_palette_colorblind: '色觉友好',
+            settings_recommended: '推荐',
+            settings_palette_soft: '柔和无障碍',
+            settings_palette_soft_note: '降低视觉刺激',
+            settings_palette_contrast: '高对比度',
+            settings_palette_contrast_note: '适合低对比度屏幕',
+            settings_palette_custom: '自定义',
+            settings_palette_custom_note: '分别选择三层颜色',
+            settings_roi_accessibility_note: 'ROI 层级同时通过颜色和 Level 1–3 文字标签进行标识。',
+            stg_title:          '设置',
+            stg_section:        'LLM 配置',
+            stg_openai_compatible: 'OpenAI 兼容 API',
+            stg_api_url:        'API 服务地址',
+            stg_api_url_placeholder: 'https://服务商地址/v1/chat/completions',
+            stg_api_url_hint:   '请输入完整的 OpenAI 兼容 chat-completions 地址。自定义地址必须使用该服务商签发的密钥。',
+            stg_get_keys:       '获取 API 密钥 <i class="fas fa-external-link-alt"></i>',
+            stg_model_name:     '模型',
+            stg_model_placeholder: '例如：gpt-5.4',
+            stg_model_hint:     '请填写服务商提供的准确模型标识。',
+            stg_browse_models:  '浏览所有模型：<a href="https://openrouter.ai/models" target="_blank">openrouter.ai/models</a>',
+            stg_api_keys:       'API 密钥',
+            stg_add_key:        '添加 API 密钥',
+            stg_multi_key_hint: '可一次粘贴多个 Key（每行一个），也可以逐个添加。',
+            stg_test:           '测试连接',
+            stg_testing:        '正在测试…',
+            stg_diagnostic_title: '连接诊断助手',
+            stg_cancel:         '取消',
+            stg_save:           '保存设置',
+        }
+    };
+
+    // 全局翻译函数，供 pathchat.js / pathchat-agent.js 调用
+    window.__t = function(key, ...args) {
+        const lang = window.__lang || 'zh';
+        const t = WS_I18N[lang] || WS_I18N.zh;
+        const val = t[key];
+        if (typeof val === 'function') return val(...args);
+        return val !== undefined ? val : (WS_I18N.zh[key] || key);
+    };
+
+    function syncWorkspaceLanguageControls(lang) {
+        const normalized = lang === 'en' ? 'en' : 'zh';
+        document.querySelectorAll('input[name="interfaceLanguage"]').forEach(input => {
+            const selected = input.value === normalized;
+            input.checked = selected;
+            input.closest('label')?.classList.toggle('is-selected', selected);
+        });
+    }
+
+    function applyWorkspaceLang(lang) {
+        lang = lang === 'en' ? 'en' : 'zh';
+        const t = WS_I18N[lang] || WS_I18N.zh;
+        // text elements
+        document.querySelectorAll('[data-i18n]').forEach(el => {
+            const key = el.getAttribute('data-i18n');
+            if (t[key] !== undefined) el.innerHTML = t[key];
+        });
+        // title attributes
+        document.querySelectorAll('[data-i18n-title]').forEach(el => {
+            const key = el.getAttribute('data-i18n-title');
+            if (t[key] !== undefined) el.title = t[key];
+        });
+        document.querySelectorAll('[data-i18n-placeholder]').forEach(el => {
+            const key = el.getAttribute('data-i18n-placeholder');
+            if (t[key] !== undefined) el.placeholder = t[key];
+        });
+        document.querySelectorAll('[data-i18n-aria-label]').forEach(el => {
+            const key = el.getAttribute('data-i18n-aria-label');
+            if (t[key] !== undefined) el.setAttribute('aria-label', t[key]);
+        });
+        // chat input placeholder
+        const chatInput = document.getElementById('chatInput');
+        if (chatInput && t.chat_placeholder) chatInput.placeholder = t.chat_placeholder;
+        // quick action buttons — set data-prompt based on language
+        document.querySelectorAll('.quick-action-btn[data-prompt-en]').forEach(btn => {
+            btn.setAttribute('data-prompt', lang === 'en'
+                ? btn.getAttribute('data-prompt-en')
+                : btn.getAttribute('data-prompt-zh'));
+        });
+        // html lang attribute
+        document.documentElement.lang = lang === 'en' ? 'en' : 'zh-CN';
+        // CSS pseudo-element text (cannot use data-i18n)
+        document.documentElement.style.setProperty('--screenshot-hint',
+            lang === 'en' ? "'Drag to select a region for screenshot'" : "'拖拽选择区域进行截图'");
+        // expose to pathchat.js
+        window.__lang = lang;
+        syncWorkspaceLanguageControls(lang);
+        window.pathchat?.setPatientLevelMode?.(window.pathchat.patientLevelMode || 'ai');
+        window.pathchat?.setPatientWsiExecutionMode?.(
+            window.pathchat.patientWsiExecutionMode || 'parallel'
+        );
+    }
+
+    function setWorkspaceLanguage(lang) {
+        const normalized = lang === 'en' ? 'en' : 'zh';
+        if (window.__lang === normalized) {
+            syncWorkspaceLanguageControls(normalized);
+            return;
+        }
+        localStorage.setItem('pc_lang', normalized);
+        applyWorkspaceLang(normalized);
+        window.dispatchEvent(new CustomEvent('pathcopilot:language-change', {
+            detail: { language: normalized }
+        }));
+    }
+
+    window.setPathCopilotLanguage = setWorkspaceLanguage;
+    document.addEventListener('change', event => {
+        const input = event.target.closest?.('input[name="interfaceLanguage"]');
+        if (input) setWorkspaceLanguage(input.value);
+    });
+
+    // Apply immediately on load
+    applyWorkspaceLang(window.__lang);
+    // Also apply after DOM fully ready (for dynamic elements)
+    document.addEventListener('DOMContentLoaded', () => applyWorkspaceLang(window.__lang));
+    </script>
+
+    <!-- JavaScript -->
+    {% set _v = range(100000) | random %}
+    <script src="{{ url_for('static', filename='js/tree-visualization.js') }}?v={{ _v }}"></script>
+    <script src="{{ url_for('static', filename='pathchat.js') }}?v={{ _v }}"></script>
+    <script src="{{ url_for('static', filename='js/pathchat-agent.js') }}?v={{ _v }}"></script>
+    <script src="{{ url_for('static', filename='js/pathchat-v2.js') }}?v={{ _v }}"></script>
+    <script>
+    // Header user dropdown
+    (function() {
+        const avatar = document.getElementById('headerUserAvatar');
+        const dropdown = document.getElementById('headerUserDropdown');
+        if (avatar && dropdown) {
+            const setOpen = (open) => {
+                dropdown.classList.toggle('show', open);
+                avatar.setAttribute('aria-expanded', open ? 'true' : 'false');
+            };
+            avatar.addEventListener('click', (e) => {
+                e.stopPropagation();
+                setOpen(!dropdown.classList.contains('show'));
+            });
+            avatar.addEventListener('keydown', (e) => {
+                if (e.key === 'Enter' || e.key === ' ') {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    setOpen(!dropdown.classList.contains('show'));
+                } else if (e.key === 'Escape') {
+                    setOpen(false);
+                    avatar.focus();
+                }
+            });
+            document.addEventListener('click', () => setOpen(false));
+        }
+    })();
+
+    // Settings Modal — OpenRouter multi-key
+    let currentLlmDefaults = {};
+
+    function updateActiveLlmNotice(config) {
+        const notice = document.getElementById('activeLlmNotice');
+        const provider = document.getElementById('effectiveProviderLabel');
+        const endpoint = config?.api_url || '';
+        const model = config?.model || '';
+        let host = endpoint;
+        try { host = new URL(endpoint).host; } catch (e) {}
+        if (provider) provider.textContent = host || '';
+        if (!notice) return;
+        if ((window.__lang || 'zh') === 'en') {
+            notice.innerHTML = `Active configuration: <code>${model || 'not set'}</code> via ${host || 'the configured endpoint'}.`;
+        } else {
+            notice.innerHTML = `当前实际配置：通过 ${host || '已配置服务'} 使用 <code>${model || '未设置模型'}</code>。`;
+        }
+    }
+
+    async function loadLlmSettings() {
+        const result = document.getElementById('testResult');
+        const diagnostic = document.getElementById('connectionDiagnostic');
+        if (result) result.textContent = '';
+        if (diagnostic) diagnostic.hidden = true;
+        try {
+            const response = await fetch('/api/user/settings', { cache: 'no-store' });
+            if (!response.ok) throw new Error(`HTTP ${response.status}`);
+            const data = await response.json();
+            if (!data.success || !data.settings) return null;
+
+            currentLlmDefaults = data.defaults || data.effective || {};
+            const effective = data.effective || currentLlmDefaults;
+            const apiUrl = document.getElementById('settingsApiUrl');
+            const model = document.getElementById('settingsModel');
+            if (apiUrl) apiUrl.value = data.settings.api_url || currentLlmDefaults.api_url || '';
+            if (model) model.value = data.settings.llm_model || currentLlmDefaults.model || '';
+            updateActiveLlmNotice(effective);
+
+            const list = document.getElementById('apiKeysList');
+            if (list) {
+                list.innerHTML = '';
+                let keys = [];
+                try { keys = JSON.parse(data.settings.api_key || '[]'); } catch (_) {}
+                if (typeof keys === 'string') keys = keys ? [keys] : [];
+                if (!Array.isArray(keys)) keys = [];
+                (keys.length ? keys : ['']).forEach(key => addApiKeyRow(key));
+            }
+            const configured = Boolean(
+                data.has_api_key ?? (Number(effective?.key_count) > 0)
+            );
+            window.PathCopilotApiKeyGuard?.markConfigured(configured);
+            return configured;
+        } catch (_) {
+            const list = document.getElementById('apiKeysList');
+            if (list && !list.children.length) addApiKeyRow('');
+            return null;
+        }
+    }
+    function addApiKeyRow(value) {
+        const list = document.getElementById('apiKeysList');
+        if (!list) return;
+        const row = document.createElement('div');
+        row.className = 'api-key-row';
+        const safeValue = String(value || '').replace(
+            /[&<>"']/g,
+            char => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[char])
+        );
+        row.innerHTML = `
+            <input type="password" class="api-key-input" value="${safeValue}"
+                   placeholder="sk-or-v1-..." spellcheck="false" autocomplete="off">
+            <button class="api-key-toggle" onclick="toggleKeyVis(this)" title="Show/Hide">
+                <i class="fas fa-eye"></i>
+            </button>
+            <button class="api-key-remove" onclick="removeKeyRow(this)" title="Remove">
+                <i class="fas fa-trash-alt"></i>
+            </button>`;
+        list.appendChild(row);
+        updateKeyCount();
+    }
+    function removeKeyRow(btn) {
+        const list = document.getElementById('apiKeysList');
+        btn.closest('.api-key-row').remove();
+        if (list.children.length === 0) addApiKeyRow('');
+        updateKeyCount();
+    }
+    function toggleKeyVis(btn) {
+        const inp = btn.previousElementSibling;
+        const icon = btn.querySelector('i');
+        if (inp.type === 'password') { inp.type = 'text'; icon.className = 'fas fa-eye-slash'; }
+        else { inp.type = 'password'; icon.className = 'fas fa-eye'; }
+    }
+    function updateKeyCount() {
+        const keys = getApiKeys();
+        const count = document.getElementById('keyCount');
+        if (count) count.textContent = `(${keys.length})`;
+    }
+    function getApiKeys() {
+        return [...document.querySelectorAll('#apiKeysList .api-key-input')]
+            .map(i => i.value.trim()).filter(Boolean);
+    }
+    async function saveSettings() {
+        const keys = getApiKeys();
+        const apiUrl = document.getElementById('settingsApiUrl')?.value.trim() || '';
+        const model = document.getElementById('settingsModel')?.value.trim() || '';
+        const data = {
+            llm_provider: 'openai-compatible',
+            api_url: apiUrl,
+            llm_model: model,
+            api_key: JSON.stringify(keys)
+        };
+        try {
+            const response = await fetch('/api/user/settings', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(data)
+            });
+            const res = await response.json();
+            if (res.success) {
+                const configured = Boolean(
+                    res.has_api_key ?? (Number(res.effective?.key_count) > 0)
+                );
+                window.PathCopilotApiKeyGuard?.markConfigured(configured);
+                if (configured) hideApiKeySetupPrompt();
+                closeSettingsModal();
+                if (typeof showNotification === 'function')
+                    showNotification(
+                        (window.__lang || 'zh') === 'en'
+                            ? 'Settings saved successfully'
+                            : '设置已保存并应用',
+                        'success'
+                    );
+                else alert('Settings saved!');
+            } else {
+                const message = res.error || 'Failed to save settings';
+                if (typeof showNotification === 'function')
+                    showNotification(message, 'error');
+                else alert(message);
+            }
+        } catch (_) {
+            const message = (window.__lang || 'zh') === 'en'
+                ? 'Could not save settings'
+                : '设置保存失败，请检查网络后重试';
+            if (typeof showNotification === 'function') showNotification(message, 'error');
+            else alert(message);
+        }
+    }
+
+    const LLM_DIAGNOSTIC_ZH = {
+        invalid_url: ['API 地址格式不正确。', ['请填写以 http:// 或 https:// 开头的完整地址。']],
+        missing_model: ['尚未填写模型标识。', ['请从服务商控制台复制准确的模型名称。']],
+        missing_custom_key: ['自定义服务地址缺少对应的 API Key。', ['请输入由同一服务商签发的密钥。', 'PathCopilot 不会把内置密钥发送到自定义地址。']],
+        missing_api_key: ['没有可用的 API Key。', ['请输入有效密钥后重试。']],
+        invalid_api_key: ['身份验证失败，API Key 可能无效。', ['检查密钥是否完整、是否属于当前服务商。', '删除密钥首尾可能存在的空格。']],
+        permission_denied: ['账号或密钥没有访问权限。', ['检查余额、模型权限、地区限制和组织权限。', '确认网址与密钥属于同一服务商。']],
+        endpoint_or_model_not_found: ['没有找到接口路径或模型。', ['确认地址包含正确的 /v1/chat/completions 路径。', '从服务商模型列表复制准确标识。']],
+        rate_limited: ['服务商正在限制请求频率。', ['稍后重试并降低并发数量。', '可添加同一服务商的其他有效密钥。']],
+        provider_unavailable: ['上游服务暂时不可用。', ['稍后重试，或检查服务商状态页面。']],
+        timeout: ['连接超时。', ['检查服务是否运行、网络、代理、防火墙和 VPN。']],
+        tls_error: ['TLS 证书校验失败。', ['检查系统时间、代理和服务端证书。']],
+        dns_error: ['无法解析服务商域名。', ['检查网址拼写、DNS、代理和网络连接。']],
+        connection_refused: ['目标服务拒绝连接。', ['若为本地接口，请先启动本地模型服务。', '检查主机名和端口。']],
+        invalid_response: ['服务已响应，但返回格式不是 OpenAI chat-completions 格式。', ['确认接口路径和兼容格式。']],
+        invalid_request: ['服务端拒绝了请求格式。', ['确认这是 OpenAI 兼容的 chat-completions 接口。']],
+        unsupported_parameters: ['模型不支持部分测试参数。', ['尝试同一服务商提供的标准聊天模型。']],
+        network_error: ['网络请求未能完成。', ['检查网址、服务状态、代理、防火墙和网络。']]
+    };
+
+    function renderConnectionDiagnostic(diagnosis) {
+        const panel = document.getElementById('connectionDiagnostic');
+        const summary = document.getElementById('connectionDiagnosticSummary');
+        const upstream = document.getElementById('connectionDiagnosticUpstream');
+        const suggestions = document.getElementById('connectionDiagnosticSuggestions');
+        if (!diagnosis) {
+            panel.hidden = true;
+            return;
+        }
+        const localized = (window.__lang || 'zh') === 'zh'
+            ? LLM_DIAGNOSTIC_ZH[diagnosis.code]
+            : null;
+        summary.textContent = localized?.[0] || diagnosis.summary || '';
+        const items = localized?.[1] || diagnosis.suggestions || [];
+        suggestions.innerHTML = '';
+        items.forEach(item => {
+            const li = document.createElement('li');
+            li.textContent = item;
+            suggestions.appendChild(li);
+        });
+        upstream.textContent = diagnosis.upstream_message
+            ? `Provider: ${diagnosis.upstream_message}`
+            : '';
+        upstream.hidden = !diagnosis.upstream_message;
+        panel.hidden = false;
+    }
+
+    function testLlmConnection() {
+        const keys = getApiKeys();
+        const apiUrl = document.getElementById('settingsApiUrl').value.trim();
+        const model = document.getElementById('settingsModel').value.trim();
+        const btn = document.getElementById('testLlmBtn');
+        const result = document.getElementById('testResult');
+        btn.disabled = true;
+        btn.innerHTML = `<i class="fas fa-spinner fa-spin"></i> ${
+            (window.__lang || 'zh') === 'en' ? 'Testing…' : '正在测试…'
+        }`;
+        result.textContent = '';
+        renderConnectionDiagnostic(null);
+        fetch('/api/user/test_llm', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                api_url: apiUrl,
+                llm_model: model,
+                api_key: keys[0] || ''
+            })
+        })
+        .then(r => r.json())
+        .then(res => {
+            if (res.success) {
+                result.textContent = (window.__lang || 'zh') === 'en'
+                    ? `✓ Connected · ${res.model} · ${res.latency_ms} ms`
+                    : `✓ 连接成功 · ${res.model} · ${res.latency_ms} ms`;
+                result.className = 'settings-test-result success';
+            } else {
+                result.textContent = (window.__lang || 'zh') === 'en'
+                    ? 'Connection failed'
+                    : '连接失败，诊断助手给出了可能原因';
+                result.className = 'settings-test-result error';
+                renderConnectionDiagnostic(res.diagnosis);
+            }
+        })
+        .catch(() => {
+            result.textContent = (window.__lang || 'zh') === 'en'
+                ? 'Connection failed'
+                : '连接失败';
+            result.className = 'settings-test-result error';
+            renderConnectionDiagnostic({
+                code: 'network_error',
+                summary: 'Network error',
+                suggestions: []
+            });
+        })
+        .finally(() => {
+            btn.disabled = false;
+            btn.innerHTML = `<i class="fas fa-bolt"></i> ${
+                (window.__lang || 'zh') === 'en' ? 'Test Connection' : '测试连接'
+            }`;
+        });
+    }
+    document.getElementById('settingsModalOverlay').addEventListener('click', function(e) {
+        if (e.target === this) closeSettingsModal();
+    });
+
+    // Product settings page.
+    function applyFrontendAppearance(value) {
+        const normalized = ['light', 'warm', 'contrast'].includes(value) ? value : 'warm';
+        document.documentElement.dataset.pcAppearance = normalized;
+        localStorage.setItem('pathcopilot.appearance', normalized);
+        document.querySelectorAll('input[name="frontendAppearance"]').forEach(input => {
+            const selected = input.value === normalized;
+            input.checked = selected;
+            input.closest('label')?.classList.toggle('is-selected', selected);
+        });
+    }
+
+    function activateSettingsPanel(name, connectionDiagnosis = null) {
+        const target = name || 'language';
+        document.querySelectorAll('[data-settings-target]').forEach(button => {
+            const active = button.dataset.settingsTarget === target;
+            button.classList.toggle('is-active', active);
+            button.setAttribute('aria-current', active ? 'page' : 'false');
+        });
+        document.querySelectorAll('[data-settings-panel]').forEach(panel => {
+            panel.classList.toggle('is-active', panel.dataset.settingsPanel === target);
+        });
+        if (target === 'model') {
+            return loadLlmSettings().then(() => {
+                if (connectionDiagnosis) renderConnectionDiagnostic(connectionDiagnosis);
+            });
+        }
+        return Promise.resolve();
+    }
+
+    function renderProductUsage(data) {
+        const renderMetric = (kind, metric) => {
+            const value = document.getElementById(`settings${kind}Usage`);
+            const note = document.getElementById(`settings${kind}UsageNote`);
+            const bar = document.getElementById(`settings${kind}UsageBar`);
+            const used = Number(metric?.used) || 0;
+            const limit = Number(metric?.limit) || 0;
+            if (value) value.textContent = String(used);
+            if (note) note.textContent = data?.quota_enabled && limit
+                ? window.__t('settings_usage_of', used, limit)
+                : window.__t('settings_usage_unlimited');
+            if (bar) bar.style.width = `${data?.quota_enabled && limit ? Math.min(100, used / limit * 100) : 0}%`;
+        };
+        renderMetric('Chat', data?.chat);
+        renderMetric('Wsi', data?.wsi);
+    }
+
+    async function loadProductUsage() {
+        try {
+            const response = await fetch('/api/user/usage', { cache: 'no-store' });
+            if (!response.ok) throw new Error(`HTTP ${response.status}`);
+            const data = await response.json();
+            if (data.success) renderProductUsage(data);
+        } catch (_) {
+            ['Chat', 'Wsi'].forEach(kind => {
+                const note = document.getElementById(`settings${kind}UsageNote`);
+                if (note) note.textContent = '—';
+            });
+        }
+    }
+
+    function filterProductSettings(value) {
+        const query = String(value || '').trim().toLocaleLowerCase();
+        const buttons = Array.from(document.querySelectorAll('[data-settings-target]'));
+        let firstMatch = '';
+        buttons.forEach(button => {
+            const panel = document.querySelector(`[data-settings-panel="${button.dataset.settingsTarget}"]`);
+            const haystack = `${button.textContent || ''} ${panel?.dataset.settingsSearch || ''}`.toLocaleLowerCase();
+            const match = !query || haystack.includes(query);
+            button.hidden = !match;
+            if (match && !firstMatch) firstMatch = button.dataset.settingsTarget;
+        });
+        const empty = document.getElementById('productSettingsEmpty');
+        if (empty) empty.hidden = Boolean(firstMatch);
+        if (firstMatch) activateSettingsPanel(firstMatch);
+        else document.querySelectorAll('[data-settings-panel]').forEach(panel => panel.classList.remove('is-active'));
+    }
+
+    function openSettingsModal(initialPanel = 'language', connectionDiagnosis = null) {
+        const overlay = document.getElementById('settingsModalOverlay');
+        if (!overlay) return;
+        overlay.style.display = 'block';
+        document.body.classList.add('product-settings-open');
+        const search = document.getElementById('settingsSearchInput');
+        if (search) search.value = '';
+        document.querySelectorAll('[data-settings-target]').forEach(button => { button.hidden = false; });
+        document.getElementById('productSettingsEmpty')?.setAttribute('hidden', '');
+        const panelReady = activateSettingsPanel(initialPanel, connectionDiagnosis);
+        syncWorkspaceLanguageControls(window.__lang);
+        applyFrontendAppearance(localStorage.getItem('pathcopilot.appearance') || 'warm');
+        window.PathCopilotRoiPalette?.bindSettingsControls();
+        window.PathCopilotRoiPalette?.syncSettingsControls();
+        void loadProductUsage();
+        window.requestAnimationFrame(() => {
+            if (initialPanel === 'model') {
+                Promise.resolve(panelReady).finally(() => {
+                    document.querySelector('#apiKeysList .api-key-input')?.focus();
+                });
+            } else {
+                search?.focus();
+            }
+        });
+        return panelReady;
+    }
+
+    function closeSettingsModal() {
+        const overlay = document.getElementById('settingsModalOverlay');
+        if (overlay) overlay.style.display = 'none';
+        document.body.classList.remove('product-settings-open');
+        document.getElementById('v2HomePrompt')?.focus();
+    }
+
+    document.querySelector('.product-settings-nav')?.addEventListener('click', event => {
+        const button = event.target.closest('[data-settings-target]');
+        if (button) activateSettingsPanel(button.dataset.settingsTarget);
+    });
+    document.getElementById('settingsSearchInput')?.addEventListener('input', event => {
+        filterProductSettings(event.target.value);
+    });
+    document.addEventListener('change', event => {
+        const input = event.target.closest?.('input[name="frontendAppearance"]');
+        if (input) applyFrontendAppearance(input.value);
+    });
+    document.addEventListener('keydown', event => {
+        if (event.key === 'Escape' && document.body.classList.contains('product-settings-open')) {
+            closeSettingsModal();
+        }
+    });
+    applyFrontendAppearance(localStorage.getItem('pathcopilot.appearance') || 'warm');
+
+    const API_KEY_PROMPT_SEEN = 'pathcopilot.apiKeyPromptSeen';
+
+    function showApiKeySetupPrompt({ force = false } = {}) {
+        if (!force && sessionStorage.getItem(API_KEY_PROMPT_SEEN) === '1') return;
+        const prompt = document.getElementById('apiKeySetupPrompt');
+        if (!prompt) return;
+        prompt.hidden = false;
+        document.body.classList.add('api-key-setup-open');
+        window.requestAnimationFrame(() => prompt.querySelector('.api-key-setup-primary')?.focus());
+    }
+
+    function hideApiKeySetupPrompt() {
+        const prompt = document.getElementById('apiKeySetupPrompt');
+        if (prompt) prompt.hidden = true;
+        document.body.classList.remove('api-key-setup-open');
+    }
+
+    function dismissApiKeySetupPrompt() {
+        sessionStorage.setItem(API_KEY_PROMPT_SEEN, '1');
+        hideApiKeySetupPrompt();
+    }
+
+    function openApiKeySettings() {
+        sessionStorage.setItem(API_KEY_PROMPT_SEEN, '1');
+        hideApiKeySetupPrompt();
+        openSettingsModal('model');
+    }
+
+    window.PathCopilotApiKeyGuard = {
+        configured: null,
+        pending: null,
+        configSignature: '',
+        validatedSignature: '',
+        validationPending: null,
+        markConfigured(value) {
+            this.configured = Boolean(value);
+            this.validatedSignature = '';
+            if (this.configured) hideApiKeySetupPrompt();
+        },
+        async refresh() {
+            if (this.pending) return this.pending;
+            this.pending = fetch('/api/user/settings', { cache: 'no-store' })
+                .then(response => {
+                    if (!response.ok) throw new Error(`HTTP ${response.status}`);
+                    return response.json();
+                })
+                .then(data => {
+                    if (!data.success) return null;
+                    const effective = data.effective || {};
+                    const nextSignature = [
+                        effective.api_url || '',
+                        effective.model || '',
+                        Number(effective.key_count) || 0
+                    ].join('|');
+                    if (nextSignature !== this.configSignature) {
+                        this.configSignature = nextSignature;
+                        this.validatedSignature = '';
+                    }
+                    this.configured = Boolean(
+                        data.has_api_key ?? (Number(effective.key_count) > 0)
+                    );
+                    return this.configured;
+                })
+                .catch(() => null)
+                .finally(() => { this.pending = null; });
+            return this.pending;
+        },
+        async ensureConfigured() {
+            const configured = await this.refresh();
+            if (configured === false) {
+                this.requireNow({
+                    code: 'missing_api_key',
+                    summary: 'No API key is available.',
+                    suggestions: ['Enter a valid API key and try again.'],
+                    upstream_message: ''
+                });
+                return false;
+            }
+            if (configured !== true) {
+                this.requireNow({
+                    code: 'network_error',
+                    summary: 'Could not read the current model configuration.',
+                    suggestions: ['Check that the PathCopilot service is running, then try again.'],
+                    upstream_message: ''
+                });
+                return false;
+            }
+            // Do not require a redundant network test on every visit or send.
+            // Saved credentials remain active until the user changes or removes
+            // them; the settings-page test remains an optional diagnostic.
+            return true;
+        },
+        isKnownMissing() {
+            return this.configured === false;
+        },
+        requireNow(diagnosis = null) {
+            hideApiKeySetupPrompt();
+            openSettingsModal('model', diagnosis);
+        }
+    };
+
+    document.getElementById('apiKeySetupPrompt')?.addEventListener('click', event => {
+        if (event.target === event.currentTarget) dismissApiKeySetupPrompt();
+    });
+    document.addEventListener('DOMContentLoaded', () => {
+        // Resolve the credential state quietly. The setup prompt is intentionally
+        // deferred until the user sends a question or starts an analysis.
+        window.PathCopilotApiKeyGuard.refresh();
+    });
+    </script>
+    <!-- Loaded last so the guarded first-run/model flow takes precedence over
+         the legacy inline settings helpers above. -->
+    <script src="{{ url_for('static', filename='js/pathcopilot-settings.js') }}?v={{ _v }}"></script>
+</body>
+</html>

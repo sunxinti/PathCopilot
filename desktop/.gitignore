@@ -1,0 +1,4 @@
+# The installer is distributed through GitHub Releases, not Git history.
+*.exe
+*.blockmap
+

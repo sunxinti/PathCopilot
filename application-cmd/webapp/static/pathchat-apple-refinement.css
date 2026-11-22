@@ -1,0 +1,1272 @@
+/*
+ * PathCopilot — restrained Apple-style refinement
+ *
+ * This file intentionally loads after the established workbench styles.
+ * It changes only presentation and interaction feedback; layout geometry,
+ * WSI controls, Agent state, and pathology behavior remain untouched.
+ */
+
+:root {
+    --pc-ui-font:
+        -apple-system,
+        BlinkMacSystemFont,
+        "SF Pro Text",
+        "SF Pro Display",
+        "Segoe UI Variable Text",
+        "Segoe UI",
+        "PingFang SC",
+        "Microsoft YaHei UI",
+        "Microsoft YaHei",
+        sans-serif;
+    --pc-hairline: rgba(73, 66, 57, 0.14);
+    --pc-hairline-strong: rgba(73, 66, 57, 0.23);
+    --pc-fill: rgba(255, 255, 255, 0.64);
+    --pc-fill-hover: rgba(83, 76, 68, 0.075);
+    --pc-fill-pressed: rgba(83, 76, 68, 0.12);
+    --pc-focus: rgba(217, 119, 87, 0.22);
+    --pc-shadow-1: 0 1px 2px rgba(43, 38, 32, 0.035);
+    --pc-shadow-2: 0 8px 28px rgba(43, 38, 32, 0.075);
+
+    /* Use the platform UI face for dense application text. */
+    --science-font-sans: var(--pc-ui-font);
+    --home-font-sans: var(--pc-ui-font);
+}
+
+html {
+    text-rendering: optimizeLegibility;
+}
+
+body,
+button,
+input,
+select,
+textarea {
+    font-family: var(--pc-ui-font);
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+}
+
+/* Analysis tree — one restrained warm material, with ROI color as a small
+   semantic accent rather than a full saturated card. */
+.tree-modal-overlay {
+    background: rgba(34, 29, 24, 0.34);
+    backdrop-filter: saturate(110%) blur(18px);
+    -webkit-backdrop-filter: saturate(110%) blur(18px);
+}
+
+.tree-modal-content {
+    width: min(1440px, calc(100vw - 32px));
+    height: min(900px, calc(100dvh - 32px));
+    border: 1px solid var(--pc-hairline);
+    border-radius: 22px;
+    background: rgba(255, 253, 249, 0.97);
+    box-shadow: 0 28px 80px rgba(43, 36, 29, 0.18);
+}
+
+.tree-modal-header,
+.tree-structure-header,
+.tree-visualization-header {
+    background: rgba(250, 247, 241, 0.9);
+    border-color: var(--pc-hairline);
+}
+
+.tree-modal-header {
+    min-height: 64px;
+    padding: 10px 16px 10px 22px;
+}
+
+.tree-modal-header h2,
+.tree-structure-header h3,
+.tree-visualization-header h3 {
+    color: var(--science-text, #29241f);
+    letter-spacing: -0.012em;
+}
+
+.tree-modal-header h2 i,
+.tree-structure-header h3 i,
+.tree-visualization-header h3 i,
+.inline-section-title i {
+    color: var(--science-accent, #d97757);
+}
+
+.tree-modal-close,
+.tree-control-btn {
+    width: 38px;
+    height: 38px;
+    border: 1px solid var(--pc-hairline);
+    border-radius: 11px;
+    background: rgba(255, 255, 255, 0.72);
+    color: var(--science-text-secondary, #6e655c);
+    box-shadow: var(--pc-shadow-1);
+}
+
+.tree-modal-close:hover,
+.tree-control-btn:hover {
+    color: var(--science-accent, #d97757);
+    border-color: color-mix(in srgb, var(--science-accent, #d97757) 38%, transparent);
+    background: color-mix(in srgb, var(--science-accent, #d97757) 8%, white);
+    transform: none;
+}
+
+.tree-modal-close:focus-visible,
+.tree-control-btn:focus-visible,
+.tree-item-header:focus-visible,
+.tree-child-item:focus-visible {
+    outline: 3px solid var(--pc-focus);
+    outline-offset: 2px;
+}
+
+.tree-modal-body {
+    gap: 12px;
+    padding: 12px;
+    background: var(--science-surface-deep, #f4f0e9);
+}
+
+.tree-structure-panel,
+.tree-visualization-panel {
+    border: 1px solid var(--pc-hairline);
+    border-radius: 16px;
+    background: var(--science-surface, #fffdf9);
+    box-shadow: var(--pc-shadow-1);
+}
+
+.tree-structure-panel {
+    width: 340px;
+}
+
+.tree-resizer {
+    background: var(--pc-hairline);
+}
+
+.tree-resizer:hover,
+.tree-resizer.dragging {
+    background: var(--science-accent, #d97757);
+}
+
+.tree-structure-stats {
+    gap: 6px;
+}
+
+.stat-item,
+.tree-item-badge {
+    background: rgba(118, 103, 88, 0.08);
+    color: var(--science-text-secondary, #6e655c);
+    border: 1px solid rgba(118, 103, 88, 0.1);
+}
+
+.tree-item-header,
+.tree-item-header.level-10x,
+.tree-item-header.level-40x,
+.tree-item-header.level-160x {
+    min-height: 44px;
+    padding: 9px 12px;
+    color: var(--science-text, #29241f);
+    background: var(--science-surface, #fffdf9);
+    border: 1px solid var(--pc-hairline);
+    border-left: 4px solid var(--tree-level-accent, #9b6b54);
+    border-radius: 12px;
+    box-shadow: var(--pc-shadow-1);
+    transition: background-color 160ms ease, border-color 160ms ease;
+}
+
+.tree-item-header.level-10x { --tree-level-accent: #cf5b4d; }
+.tree-item-header.level-40x { --tree-level-accent: #4f7fa5; }
+.tree-item-header.level-160x { --tree-level-accent: #4f9568; }
+
+.tree-item-header:hover {
+    transform: none;
+    background: var(--pc-fill-hover);
+    box-shadow: var(--pc-shadow-1);
+}
+
+.tree-item-children {
+    border-left: 1px solid var(--pc-hairline-strong);
+}
+
+.tree-child-item {
+    border: 1px solid transparent;
+    box-shadow: none;
+    background: rgba(255, 255, 255, 0.56);
+}
+
+.tree-child-item:hover,
+.tree-child-item.active {
+    transform: none;
+    border-color: color-mix(in srgb, var(--science-accent, #d97757) 30%, transparent);
+    background: color-mix(in srgb, var(--science-accent, #d97757) 7%, white);
+}
+
+.tree-child-label,
+.tree-child-description,
+.inline-section-body {
+    color: var(--science-text, #29241f);
+}
+
+.tree-child-description {
+    font-size: 13px;
+    line-height: 1.5;
+}
+
+.tree-child-confidence,
+.inline-tag {
+    background: rgba(79, 149, 104, 0.12);
+    color: #376c49;
+    border: 1px solid rgba(79, 149, 104, 0.2);
+}
+
+.tree-visualization-content,
+#treeSvg,
+.inline-node-detail,
+.inline-detail-image,
+.tree-node-details-inline {
+    background: var(--science-surface, #fffdf9);
+}
+
+.inline-detail-header {
+    color: var(--science-text, #29241f);
+    background: rgba(118, 103, 88, 0.1);
+    border-left: 4px solid #9b6b54;
+}
+
+.inline-detail-header.node-tone-wsi { border-left-color: #77668f; }
+.inline-detail-header.node-tone-red { border-left-color: #cf5b4d; }
+.inline-detail-header.node-tone-blue { border-left-color: #4f7fa5; }
+.inline-detail-header.node-tone-green { border-left-color: #4f9568; }
+
+.inline-node-zoom,
+.inline-node-conf {
+    background: rgba(255, 255, 255, 0.7);
+    border: 1px solid var(--pc-hairline);
+}
+
+.inline-section {
+    border-color: var(--pc-hairline);
+}
+
+.inline-section-title {
+    min-height: 32px;
+    background: rgba(118, 103, 88, 0.06);
+    color: var(--science-text-secondary, #6e655c);
+    font-size: 12px;
+}
+
+.inline-section-body {
+    font-size: 13px;
+    line-height: 1.58;
+}
+
+@media (max-width: 820px) {
+    .tree-modal-content {
+        width: calc(100vw - 12px);
+        height: calc(100dvh - 12px);
+        border-radius: 18px;
+    }
+
+    .tree-modal-header {
+        min-height: 56px;
+        padding: 6px 8px 6px 14px;
+    }
+
+    .tree-modal-header h2 {
+        min-width: 0;
+        font-size: 17px;
+    }
+
+    .tree-modal-close,
+    .tree-control-btn {
+        width: 44px;
+        height: 44px;
+        flex: 0 0 44px;
+    }
+
+    .tree-modal-body {
+        display: grid;
+        grid-template-rows: minmax(210px, 42%) minmax(0, 1fr);
+        gap: 8px;
+        padding: 8px;
+    }
+
+    .tree-structure-panel {
+        width: 100% !important;
+        min-width: 0;
+        max-width: none;
+        max-height: none;
+    }
+
+    .tree-resizer {
+        display: none;
+    }
+
+    .tree-visualization-header {
+        min-height: 56px;
+        padding: 6px 8px 6px 12px;
+    }
+
+    .tree-visualization-header h3 {
+        font-size: 14px;
+    }
+
+    .tree-visualization-controls {
+        gap: 4px;
+        overflow-x: auto;
+        max-width: min(212px, 58vw);
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .tree-modal-content,
+    .tree-item,
+    .tree-item-header,
+    .tree-child-item {
+        animation: none !important;
+        transition: none !important;
+    }
+}
+
+/* Calm depth: one shell surface, quiet inner panes. */
+.header {
+    border-color: var(--pc-hairline);
+    background: rgba(255, 254, 250, 0.82);
+    box-shadow: 0 2px 14px rgba(52, 45, 38, 0.055);
+    backdrop-filter: saturate(125%) blur(16px);
+    -webkit-backdrop-filter: saturate(125%) blur(16px);
+}
+
+.left-panel,
+.center-panel,
+.right-panel {
+    border-color: var(--pc-hairline);
+    box-shadow: var(--pc-shadow-1);
+}
+
+.left-panel,
+.v2-home-sidebar {
+    border-color: var(--pc-hairline);
+}
+
+.panel-header,
+.v2-subagent-results-heading,
+.chat-input-container {
+    border-color: var(--pc-hairline);
+}
+
+/* Typography: compact UI labels with a clearer reading rhythm. */
+.header-nav-link,
+.v2-home-nav-item,
+.v2-home-case-copy strong,
+.v2-panel-title h3,
+.v2-inspector-title strong,
+.v2-subagent-results-heading strong {
+    letter-spacing: -0.006em;
+}
+
+.right-panel .chat-messages {
+    color: #292825;
+    font-size: 13px;
+}
+
+.right-panel .message-text {
+    color: #302f2c;
+    line-height: 1.68;
+}
+
+.right-panel .assistant-message .message-text {
+    max-width: 70ch;
+}
+
+.right-panel .message-time,
+.right-panel .agent-status-line,
+.right-panel .tool-activity-line {
+    font-variant-numeric: tabular-nums;
+}
+
+/* Codex-like conversation: neutral user chip, unboxed assistant response. */
+.right-panel .user-message .message-text,
+.v2-home-chat-message.is-user .v2-home-chat-bubble {
+    border-color: rgba(68, 65, 60, 0.08);
+    color: #302f2c;
+    background: #f0f0ee;
+    box-shadow: none;
+}
+
+.v2-home-chat-bubble {
+    border-color: transparent;
+    background: transparent;
+    box-shadow: none;
+}
+
+.v2-home-chat-avatar {
+    color: #9c604c;
+    background: #f3e7e1;
+}
+
+/* Inputs should feel lifted only while they are being used. */
+.v2-home-composer {
+    border-color: var(--pc-hairline);
+    border-radius: 16px;
+    background: rgba(255, 255, 255, 0.9);
+    box-shadow: var(--pc-shadow-2);
+}
+
+.v2-home-composer:focus-within {
+    border-color: rgba(190, 105, 76, 0.52);
+    box-shadow: 0 10px 32px rgba(48, 42, 37, 0.09), 0 0 0 3px var(--pc-focus);
+}
+
+.v2-home-composer-context {
+    border-color: rgba(73, 66, 57, 0.09);
+    background: rgba(246, 246, 243, 0.78);
+}
+
+.input-area {
+    border-color: var(--pc-hairline);
+    background: rgba(255, 255, 255, 0.82);
+    box-shadow: none;
+}
+
+.input-area:focus-within {
+    border-color: rgba(190, 105, 76, 0.52);
+    box-shadow: 0 0 0 3px var(--pc-focus);
+}
+
+/* Physical, immediate feedback without decorative motion. */
+.viewer-controls .control-btn,
+.right-panel .panel-controls .control-btn,
+.v2-back-home-button,
+.v2-home-icon-button,
+.v2-home-section-action,
+.v2-home-nav-item,
+.v2-home-case-row,
+.v2-home-profile,
+.v2-home-tool-button,
+.v2-home-submit,
+.send-btn,
+.header-user-avatar,
+.header-nav-link {
+    transition:
+        color 130ms ease-out,
+        background-color 130ms ease-out,
+        border-color 130ms ease-out,
+        box-shadow 130ms ease-out,
+        opacity 130ms ease-out,
+        transform 90ms ease-out;
+}
+
+.viewer-controls .control-btn,
+.right-panel .panel-controls .control-btn {
+    border-color: var(--pc-hairline);
+    background: var(--pc-fill);
+    box-shadow: var(--pc-shadow-1);
+}
+
+.viewer-controls .control-btn:hover,
+.right-panel .panel-controls .control-btn:hover,
+.v2-back-home-button:hover,
+.v2-home-icon-button:hover,
+.v2-home-section-action:hover,
+.v2-home-tool-button:hover {
+    border-color: var(--pc-hairline-strong);
+    background: var(--pc-fill-hover);
+    box-shadow: none;
+}
+
+@media (hover: hover) and (pointer: fine) {
+    .viewer-controls .control-btn:hover,
+    .right-panel .panel-controls .control-btn:hover {
+        transform: translateY(-1px);
+    }
+}
+
+.viewer-controls .control-btn:active,
+.right-panel .panel-controls .control-btn:active,
+.v2-back-home-button:active,
+.v2-home-icon-button:active,
+.v2-home-section-action:active,
+.v2-home-nav-item:active,
+.v2-home-case-row:active,
+.v2-home-profile:active,
+.v2-home-tool-button:active,
+.v2-home-submit:active:not(:disabled),
+.send-btn:active:not(:disabled),
+.header-user-avatar:active,
+.header-nav-link:active {
+    background: var(--pc-fill-pressed);
+    transform: scale(0.96);
+    transition-duration: 60ms;
+}
+
+.v2-home-submit,
+.send-btn {
+    box-shadow: 0 3px 10px rgba(185, 91, 62, 0.18);
+}
+
+.v2-home-submit:hover:not(:disabled),
+.send-btn:hover:not(:disabled) {
+    box-shadow: 0 4px 12px rgba(185, 91, 62, 0.22);
+}
+
+.v2-home-submit:disabled,
+.send-btn:disabled {
+    box-shadow: none;
+    transform: none;
+}
+
+/* Keyboard focus stays obvious without surrounding every mouse click. */
+:where(
+    button,
+    a,
+    input,
+    textarea,
+    select,
+    [tabindex]
+):focus-visible {
+    outline: 2px solid rgba(190, 105, 76, 0.72);
+    outline-offset: 2px;
+}
+
+/* Scrollbars are visible when needed and quiet at rest. */
+.v2-home-case-list,
+.v2-home-chat,
+.right-panel .chat-messages,
+.v2-subagent-pane .route-steps-container {
+    scrollbar-color: rgba(92, 85, 77, 0.25) transparent;
+    scrollbar-width: thin;
+}
+
+/* Respect system accessibility preferences. */
+@media (prefers-reduced-motion: reduce) {
+    *,
+    *::before,
+    *::after {
+        scroll-behavior: auto !important;
+        animation-duration: 0.001ms !important;
+        animation-iteration-count: 1 !important;
+        transition-duration: 0.001ms !important;
+    }
+}
+
+/* LLM endpoint diagnostics */
+.settings-connection-diagnostic {
+    margin-top: 12px;
+    padding: 13px 14px;
+    border: 1px solid color-mix(in srgb, var(--accent, #d97757) 28%, #d8d8d8);
+    border-radius: 13px;
+    background: color-mix(in srgb, var(--accent, #d97757) 6%, #ffffff);
+    color: #37352f;
+    font-size: 13px;
+    line-height: 1.55;
+}
+
+.settings-connection-diagnostic[hidden] {
+    display: none;
+}
+
+.settings-diagnostic-heading {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 7px;
+}
+
+.settings-diagnostic-heading i {
+    color: var(--accent, #d97757);
+}
+
+.settings-connection-diagnostic p {
+    margin: 0 0 6px;
+}
+
+.settings-connection-diagnostic ul {
+    margin: 5px 0 0;
+    padding-left: 20px;
+}
+
+.settings-diagnostic-upstream {
+    overflow-wrap: anywhere;
+    color: #77736d;
+    font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+    font-size: 11px;
+}
+
+@media (prefers-reduced-transparency: reduce) {
+    .header,
+    .v2-home-composer,
+    .input-area {
+        background: #fffdf8;
+        backdrop-filter: none;
+        -webkit-backdrop-filter: none;
+    }
+}
+
+@media (prefers-contrast: more) {
+    :root {
+        --pc-hairline: rgba(45, 41, 36, 0.38);
+        --pc-hairline-strong: rgba(45, 41, 36, 0.56);
+    }
+
+    .right-panel .message-text,
+    .right-panel .user-message .message-text {
+        color: #171613;
+    }
+}
+
+/* --------------------------------------------------------------------------
+   Accessible ROI palettes
+   Presentation-only variables: analysis data keeps the canonical
+   red / blue / green level identifiers for backward-compatible caches.
+   -------------------------------------------------------------------------- */
+
+:root {
+    --roi-level1: #ff0000;
+    --roi-level1-rgb: 255, 0, 0;
+    --roi-level2: #0066ff;
+    --roi-level2-rgb: 0, 102, 255;
+    --roi-level3: #00cc00;
+    --roi-level3-rgb: 0, 204, 0;
+}
+
+/* Preserve the original PathCopilot ROI appearance: all hierarchy levels use
+   solid borders, while color and Level 1-3 text labels identify each level. */
+.roi-overlay-10x,
+.roi-overlay[data-roi-level="level1"],
+.phase-overlay[data-roi-level="level1"],
+.collab-region-overlay[data-roi-level="level1"] {
+    border-color: var(--roi-level1) !important;
+    border-style: solid !important;
+    box-shadow: 0 0 0 1px rgba(var(--roi-level1-rgb), 0.2),
+                0 0 10px rgba(var(--roi-level1-rgb), 0.18) !important;
+}
+
+.roi-overlay-40x,
+.roi-overlay[data-roi-level="level2"],
+.phase-overlay[data-roi-level="level2"],
+.collab-region-overlay[data-roi-level="level2"] {
+    border-color: var(--roi-level2) !important;
+    border-style: solid !important;
+    box-shadow: 0 0 0 1px rgba(var(--roi-level2-rgb), 0.2),
+                0 0 10px rgba(var(--roi-level2-rgb), 0.18) !important;
+}
+
+.roi-overlay-160x,
+.roi-overlay[data-roi-level="level3"],
+.phase-overlay[data-roi-level="level3"],
+.collab-region-overlay[data-roi-level="level3"] {
+    border-color: var(--roi-level3) !important;
+    border-style: solid !important;
+    box-shadow: 0 0 0 1px rgba(var(--roi-level3-rgb), 0.24),
+                0 0 10px rgba(var(--roi-level3-rgb), 0.18) !important;
+}
+
+.roi-overlay-10x .roi-overlay-label,
+.roi-overlay[data-roi-level="level1"] .roi-overlay-label,
+.phase-overlay[data-roi-level="level1"] .phase-overlay-label {
+    background: var(--roi-level1) !important;
+}
+
+.roi-overlay-40x .roi-overlay-label,
+.roi-overlay[data-roi-level="level2"] .roi-overlay-label,
+.phase-overlay[data-roi-level="level2"] .phase-overlay-label {
+    background: var(--roi-level2) !important;
+}
+
+.roi-overlay-160x .roi-overlay-label,
+.roi-overlay[data-roi-level="level3"] .roi-overlay-label,
+.phase-overlay[data-roi-level="level3"] .phase-overlay-label {
+    background: var(--roi-level3) !important;
+}
+
+/* A palette switch should feel immediate but remain comfortable for motion-
+   sensitive users. Color and Level 1-3 labels provide the hierarchy cues. */
+.roi-overlay,
+.phase-overlay,
+.collab-region-overlay {
+    transition: border-color 160ms ease-out,
+                outline-color 160ms ease-out,
+                background-color 160ms ease-out,
+                box-shadow 160ms ease-out;
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .roi-overlay,
+    .phase-overlay,
+    .collab-region-overlay {
+        transition: none;
+    }
+}
+
+.roi-level-legend .legend-color {
+    width: 18px;
+    height: 12px;
+    border-radius: 4px;
+    background: transparent !important;
+    border-width: 3px;
+    border-color: currentColor;
+}
+
+.roi-level-legend-1 { color: var(--roi-level1); }
+.roi-level-legend-2 { color: var(--roi-level2); }
+.roi-level-legend-3 { color: var(--roi-level3); }
+.roi-level-legend-1 .legend-color { border-style: solid; }
+.roi-level-legend-2 .legend-color { border-style: solid; }
+.roi-level-legend-3 .legend-color { border-style: solid; }
+.roi-level-legend > span:last-child { color: var(--pc-text, #2d2924); }
+
+.tree-node.magnification-10x,
+.route-step-card.route-red,
+.route-tree-node[data-level="red"],
+.route-tree-node[data-roi-level="level1"],
+.collab-tree-node[data-level="red"],
+.collab-tree-node[data-roi-level="level1"] {
+    border-left-color: var(--roi-level1) !important;
+}
+
+.tree-node.magnification-40x,
+.route-step-card.route-blue,
+.route-tree-node[data-level="blue"],
+.route-tree-node[data-roi-level="level2"],
+.collab-tree-node[data-level="blue"],
+.collab-tree-node[data-roi-level="level2"] {
+    border-left-color: var(--roi-level2) !important;
+}
+
+.tree-node.magnification-160x,
+.route-step-card.route-green,
+.route-tree-node[data-level="green"],
+.route-tree-node[data-roi-level="level3"],
+.collab-tree-node[data-level="green"],
+.collab-tree-node[data-roi-level="level3"] {
+    border-left-color: var(--roi-level3) !important;
+}
+
+.magnification-10x .tree-node-icon,
+.route-red .step-icon {
+    background: rgba(var(--roi-level1-rgb), 0.1) !important;
+    color: var(--roi-level1) !important;
+}
+
+.magnification-40x .tree-node-icon,
+.route-blue .step-icon {
+    background: rgba(var(--roi-level2-rgb), 0.1) !important;
+    color: var(--roi-level2) !important;
+}
+
+.magnification-160x .tree-node-icon,
+.route-green .step-icon {
+    background: rgba(var(--roi-level3-rgb), 0.11) !important;
+    color: var(--roi-level3) !important;
+}
+
+/* Settings surface */
+.settings-modal {
+    width: min(760px, calc(100vw - 32px));
+    max-height: min(860px, calc(100vh - 32px));
+}
+
+.settings-modal-body {
+    display: grid;
+    gap: 22px;
+    overflow-y: auto;
+}
+
+/* LLM connection setup — calm, full-width Apple-style form */
+.settings-section:has(#settingsApiUrl) {
+    display: grid;
+    gap: 14px;
+}
+
+.settings-section:has(#settingsApiUrl) > h3,
+.settings-section:has(#settingsApiUrl) .settings-provider-badge,
+.settings-section:has(#settingsApiUrl) .settings-default-notice,
+.settings-section:has(#settingsApiUrl) .settings-form-group {
+    margin: 0;
+}
+
+.settings-section:has(#settingsApiUrl) .settings-provider-badge {
+    min-height: 42px;
+    padding: 0 13px;
+    border: 1px solid rgba(45, 41, 36, 0.10);
+    border-radius: 11px;
+    background: rgba(248, 247, 244, 0.88);
+    color: var(--science-text, #292622);
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.82);
+}
+
+.settings-section:has(#settingsApiUrl) .settings-provider-badge i {
+    color: #6e6a64;
+}
+
+.settings-section:has(#settingsApiUrl) .settings-provider-link {
+    color: #77726b;
+    font-weight: 500;
+}
+
+.settings-section:has(#settingsApiUrl) .settings-default-notice {
+    padding: 10px 12px;
+    border: 0;
+    border-radius: 10px;
+    background: rgba(241, 240, 236, 0.86);
+    color: #625e57;
+    line-height: 1.45;
+}
+
+.settings-section:has(#settingsApiUrl) .settings-default-notice i {
+    color: var(--science-accent, #d97757);
+}
+
+.settings-section:has(#settingsApiUrl) .settings-form-group {
+    display: grid;
+    gap: 6px;
+}
+
+.settings-section:has(#settingsApiUrl) .settings-form-group label {
+    margin: 0;
+    color: #45413c;
+    font-size: 12px;
+    font-weight: 600;
+    letter-spacing: 0.01em;
+}
+
+.settings-section:has(#settingsApiUrl) input[type="url"],
+.settings-section:has(#settingsApiUrl) input[type="text"],
+.settings-section:has(#settingsApiUrl) input[type="password"] {
+    box-sizing: border-box;
+    width: 100%;
+    min-width: 0;
+    height: 42px;
+    padding: 0 13px;
+    border: 1px solid rgba(45, 41, 36, 0.14);
+    border-radius: 10px;
+    background: rgba(249, 249, 247, 0.96);
+    color: #25221f;
+    font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text",
+        "Segoe UI", "PingFang SC", sans-serif;
+    font-size: 13px;
+    line-height: 1;
+    outline: none;
+    box-shadow: inset 0 1px 1px rgba(35, 31, 27, 0.025);
+    transition: border-color 150ms ease, box-shadow 150ms ease,
+        background-color 150ms ease;
+}
+
+.settings-section:has(#settingsApiUrl) input[type="url"]:hover,
+.settings-section:has(#settingsApiUrl) input[type="text"]:hover,
+.settings-section:has(#settingsApiUrl) input[type="password"]:hover {
+    border-color: rgba(45, 41, 36, 0.23);
+}
+
+.settings-section:has(#settingsApiUrl) input[type="url"]:focus,
+.settings-section:has(#settingsApiUrl) input[type="text"]:focus,
+.settings-section:has(#settingsApiUrl) input[type="password"]:focus {
+    border-color: rgba(215, 119, 87, 0.72);
+    background: #fff;
+    box-shadow: 0 0 0 3px rgba(215, 119, 87, 0.12);
+}
+
+.settings-section:has(#settingsApiUrl) .settings-hint {
+    margin: 0;
+    color: #8b867f;
+    font-size: 11px;
+    line-height: 1.45;
+}
+
+.settings-section:has(#settingsApiUrl) .api-key-row {
+    gap: 8px;
+}
+
+.settings-section:has(#settingsApiUrl) .settings-add-key-btn,
+.settings-section:has(#settingsApiUrl) .settings-test-btn {
+    min-height: 36px;
+    border-radius: 9px;
+}
+
+@media (prefers-contrast: more) {
+    .settings-section:has(#settingsApiUrl) input[type="url"],
+    .settings-section:has(#settingsApiUrl) input[type="text"],
+    .settings-section:has(#settingsApiUrl) input[type="password"] {
+        border-color: #4a4742;
+    }
+}
+
+.settings-section + .settings-section {
+    padding-top: 22px;
+    border-top: 1px solid var(--pc-hairline, rgba(45, 41, 36, 0.12));
+}
+
+.settings-section-heading {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 16px;
+    margin-bottom: 14px;
+}
+
+.settings-section-heading h3 {
+    margin: 0 0 4px;
+}
+
+.settings-section-heading p {
+    margin: 0;
+    max-width: 520px;
+    color: var(--pc-text-secondary, #716b63);
+    font-size: 13px;
+    line-height: 1.5;
+}
+
+.settings-local-badge,
+.roi-recommended {
+    display: inline-flex;
+    align-items: center;
+    min-height: 22px;
+    padding: 2px 8px;
+    border-radius: 999px;
+    color: #79533f;
+    background: #f8ede6;
+    border: 1px solid rgba(196, 107, 69, 0.18);
+    font-size: 11px;
+    font-weight: 600;
+    white-space: nowrap;
+}
+
+.interface-language-settings {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 24px;
+    padding: 12px 14px !important;
+    border: 1px solid var(--pc-hairline, rgba(45, 41, 36, 0.13));
+    border-radius: 15px;
+    background: rgba(255, 255, 255, 0.62);
+}
+
+.interface-language-copy {
+    display: flex;
+    align-items: center;
+    gap: 11px;
+    min-width: 0;
+}
+
+.interface-language-copy h3 {
+    margin: 0 0 3px;
+    font-size: 13px;
+    line-height: 1.25;
+}
+
+.interface-language-copy p {
+    margin: 0;
+    color: var(--pc-text-secondary, #716b63);
+    font-size: 11px;
+    line-height: 1.4;
+}
+
+.interface-language-icon {
+    display: grid;
+    flex: 0 0 auto;
+    place-items: center;
+    width: 34px;
+    height: 34px;
+    border-radius: 10px;
+    color: #765443;
+    background: #f8ede6;
+}
+
+.interface-language-segment {
+    display: inline-grid;
+    flex: 0 0 auto;
+    grid-template-columns: repeat(2, minmax(92px, 1fr));
+    gap: 3px;
+    padding: 3px;
+    border: 1px solid rgba(45, 41, 36, 0.08);
+    border-radius: 11px;
+    background: rgba(45, 41, 36, 0.055);
+}
+
+.interface-language-segment label {
+    position: relative;
+    cursor: pointer;
+}
+
+.interface-language-segment input {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    opacity: 0;
+    pointer-events: none;
+}
+
+.interface-language-segment span {
+    display: grid;
+    place-items: center;
+    min-height: 32px;
+    padding: 0 12px;
+    border-radius: 8px;
+    color: var(--pc-text-secondary, #716b63);
+    font-size: 12px;
+    font-weight: 550;
+    white-space: nowrap;
+    transition: color 150ms ease, background-color 150ms ease, box-shadow 150ms ease, transform 100ms ease;
+}
+
+.interface-language-segment label:hover span {
+    color: var(--pc-text, #2d2924);
+}
+
+.interface-language-segment label.is-selected span {
+    color: var(--pc-text, #2d2924);
+    background: rgba(255, 255, 255, 0.94);
+    box-shadow: 0 1px 4px rgba(45, 41, 36, 0.12);
+}
+
+.interface-language-segment input:focus-visible + span {
+    outline: 3px solid rgba(0, 114, 178, 0.3);
+    outline-offset: 2px;
+}
+
+.interface-language-segment label:active span {
+    transform: scale(0.975);
+}
+
+.roi-palette-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 10px;
+}
+
+.roi-palette-option {
+    display: block;
+    cursor: pointer;
+}
+
+.roi-palette-option > input {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    opacity: 0;
+    pointer-events: none;
+}
+
+.roi-palette-card {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    min-height: 70px;
+    padding: 13px 14px;
+    border: 1px solid var(--pc-hairline, rgba(45, 41, 36, 0.13));
+    border-radius: 14px;
+    color: var(--pc-text, #2d2924);
+    background: rgba(255, 255, 255, 0.7);
+    box-shadow: 0 1px 1px rgba(45, 41, 36, 0.02);
+    transition: border-color 160ms ease, background-color 160ms ease, box-shadow 160ms ease, transform 160ms ease;
+}
+
+.roi-palette-option:hover .roi-palette-card {
+    border-color: rgba(196, 107, 69, 0.34);
+    background: #fffdf9;
+}
+
+.roi-palette-option.is-selected .roi-palette-card {
+    border-color: #c46b45;
+    background: #fff8f3;
+    box-shadow: 0 0 0 3px rgba(196, 107, 69, 0.11);
+}
+
+.roi-palette-option > input:focus-visible + .roi-palette-card {
+    outline: 3px solid rgba(0, 114, 178, 0.3);
+    outline-offset: 2px;
+}
+
+.roi-palette-option:active .roi-palette-card {
+    transform: scale(0.992);
+}
+
+.roi-palette-card-heading {
+    display: grid;
+    gap: 5px;
+}
+
+.roi-palette-card-heading strong {
+    font-size: 13px;
+    line-height: 1.25;
+}
+
+.roi-palette-card-heading small:not(.roi-recommended) {
+    color: var(--pc-text-secondary, #716b63);
+    font-size: 11px;
+}
+
+.roi-recommended {
+    width: max-content;
+    min-height: 18px;
+    padding: 1px 6px;
+    font-size: 10px;
+}
+
+.roi-palette-swatches {
+    display: inline-flex;
+    align-items: center;
+    padding: 4px;
+    border-radius: 999px;
+    background: rgba(45, 41, 36, 0.045);
+}
+
+.roi-palette-swatches i {
+    width: 19px;
+    height: 19px;
+    margin-left: -3px;
+    border: 2px solid #fff;
+    border-radius: 50%;
+    background: var(--swatch);
+    box-shadow: 0 1px 2px rgba(45, 41, 36, 0.16);
+}
+
+.roi-palette-swatches i:first-child {
+    margin-left: 0;
+}
+
+.roi-palette-custom-icon {
+    display: grid;
+    place-items: center;
+    width: 36px;
+    height: 36px;
+    border-radius: 11px;
+    color: #6b6259;
+    background: rgba(45, 41, 36, 0.055);
+}
+
+.roi-custom-color-controls {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 8px;
+    margin-top: 12px;
+}
+
+.roi-custom-color-controls[hidden] {
+    display: none;
+}
+
+.roi-custom-color-controls > label {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    min-width: 0;
+    padding: 10px;
+    border-radius: 12px;
+    background: rgba(45, 41, 36, 0.035);
+}
+
+.roi-custom-color-controls label > span:first-child {
+    display: grid;
+    gap: 2px;
+}
+
+.roi-custom-color-controls b {
+    font-size: 12px;
+}
+
+.roi-custom-color-controls small {
+    color: var(--pc-text-secondary, #716b63);
+    font-size: 10px;
+}
+
+.roi-color-picker {
+    display: grid;
+    justify-items: end;
+    gap: 2px;
+}
+
+.roi-color-picker input[type="color"] {
+    width: 34px;
+    height: 28px;
+    padding: 2px;
+    border: 1px solid var(--pc-hairline, rgba(45, 41, 36, 0.13));
+    border-radius: 8px;
+    background: #fff;
+    cursor: pointer;
+}
+
+.roi-color-picker output {
+    color: var(--pc-text-secondary, #716b63);
+    font: 9px/1.2 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+}
+
+.roi-accessibility-note {
+    display: flex;
+    align-items: flex-start;
+    gap: 9px;
+    margin-top: 12px;
+    padding: 10px 12px;
+    border-radius: 12px;
+    color: #5d574f;
+    background: rgba(0, 114, 178, 0.055);
+    font-size: 12px;
+    line-height: 1.5;
+}
+
+.roi-accessibility-note i {
+    margin-top: 2px;
+    color: var(--roi-level2);
+}
+
+.roi-palette-status {
+    height: 16px;
+    margin: 5px 0 -9px;
+    color: #4c7a60;
+    font-size: 11px;
+    opacity: 0;
+    transition: opacity 160ms ease;
+}
+
+.roi-palette-status.is-visible {
+    opacity: 1;
+}
+
+@media (max-width: 680px) {
+    .interface-language-settings {
+        align-items: stretch;
+        flex-direction: column;
+        gap: 12px;
+    }
+
+    .interface-language-segment {
+        width: 100%;
+    }
+
+    .roi-palette-grid,
+    .roi-custom-color-controls {
+        grid-template-columns: 1fr;
+    }
+
+    .settings-section-heading {
+        display: grid;
+    }
+
+    .settings-local-badge {
+        width: max-content;
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .interface-language-segment span,
+    .roi-palette-card,
+    .roi-palette-status {
+        transition: none;
+    }
+
+    .roi-palette-option:active .roi-palette-card {
+        transform: none;
+    }
+}
+
+@media (prefers-contrast: more) {
+    .roi-palette-card,
+    .roi-custom-color-controls > label {
+        border: 2px solid #36322d;
+    }
+
+    .roi-palette-option.is-selected .roi-palette-card {
+        outline: 3px solid #111;
+        outline-offset: 2px;
+    }
+}

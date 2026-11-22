@@ -1,0 +1,46 @@
+# Credentials and local configuration
+.env
+.env.*
+!.env.example
+
+# Python caches and virtual environments
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.venv/
+venv/
+
+# Runtime state
+*.db
+*.db-wal
+*.db-shm
+*.sqlite
+*.sqlite3
+*.sqlite3-wal
+*.sqlite3-shm
+uploaded_files.json
+logs/
+outputs/
+uploads/
+thumbnails/
+dzi_files/
+debug_images/
+demo_data/
+
+# Whole-slide images and derived pyramids
+*.svs
+*.ndpi
+*.mrxs
+*.scn
+*.bif
+*.vms
+*.vmu
+*.tif
+*.tiff
+*.dzi
+*_files/
+
+# Local reports and temporary artifacts
+*.log
+*.tmp
+~$*

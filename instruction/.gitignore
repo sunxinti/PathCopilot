@@ -1,0 +1,4 @@
+# Keep local full-resolution screenshots for editing, but publish only the
+# optimized, descriptively named images used by the guide.
+Snipaste_*.png
+

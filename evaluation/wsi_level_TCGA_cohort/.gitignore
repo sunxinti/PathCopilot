@@ -1,0 +1,29 @@
+**/__pycache__/
+*.py[cod]
+
+# Local runtime / evaluation artifacts (do not depend on Chinese folder names)
+*.db
+*.db-wal
+*.db-shm
+*.sqlite
+*.sqlite-wal
+*.sqlite-shm
+*.sqlite3
+*.sqlite3-wal
+*.sqlite3-shm
+runtime_data/
+outputs/
+logs/
+uploads/
+debug_images/
+dzi_files/
+thumbnails/
+demo_data/
+uploaded_files.json
+results_index*.csv
+
+# Credentials and whole-slide files
+.env
+.env.*
+*.svs
+*.ndpi
